@@ -1,1 +1,1 @@
-# Project Group 18SENG 360 Project repository for group 18## Description## Installation## Usage## Authors- Erik McKelvey- Kester Yang- Daming Wang- Samuel Gao
+# Project Group 18SENG 360 Project repository for group 18## Description## InstallationFirst run the command `docker-compose build` to build the docker imagesThen, run the commad `docker-compose up` to start up the server and two client images## Usage## Authors- Erik McKelvey- Kester Yang- Daming Wang- Samuel Gao
