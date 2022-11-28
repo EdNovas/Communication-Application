@@ -1,6 +1,7 @@
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 print("Hello from client")
 
@@ -66,5 +67,9 @@ def generate_shared_key(private_key, peer_public_key):
 # 2. generate_public_key(private_key)
 # 3. sign_message(private_key, public_key)
 # 4. send(public_key) and send(signature)
+
+# Once the peer has recieved the public_key and signature they will repeat steps 1-4
+
 # 5. Recieve peer_public_key and signature
 # 6. validate_signature(peer_public_key, signature)
+# 7. generate_shared_key(private_key, peer_public_key)
