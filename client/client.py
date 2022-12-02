@@ -7,7 +7,12 @@ print("Hello, welcome to our communication application. ")
 account_status = input("Do you have an account already?(y/n): ")
 
 if (account_status == 'n' or account_status == 'N'):
-    new_account = input("Please register your account name: ")
+    new_account = input("Please register your account name(only alphabet is allowed): ")
+    while (True):
+        if (new_account.isalpha()):
+            break
+        else:
+            new_account = input("Please register your account name with only alphabet: ")
     new_password = getpass.getpass("Password: ")
     # store the account and password into server database
 elif (account_status == 'y' or account_status == 'Y'):
