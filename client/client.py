@@ -69,6 +69,8 @@ def main():
             break
         else:
             new_account = input("Please register your account name with only alphabet: ")
+    private_key = generate_private_key()
+    public_key = generate_public_key(private_key)
 
     
 # Steps:
