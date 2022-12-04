@@ -118,13 +118,17 @@ def pad_message(message):
 ## HMAC CRYPTOGRAPHY FUNCTIONS ##
 #################################
 
-def hmac_generate_signature(private_key, message):
-    h = hmac.HMAC(private_key, hashes.SHA256())
+# This function gets a SHA256 hash, which is used as the key for HMAC key
+def get_sha256_hash(input):
+    return hases.SHA256.update(input).finalize()
+
+def hmac_generate_signature(key, message):
+    h = hmac.HMAC(key, hashes.SHA256())
     h.update(message)
     return h.finalize()
 
-def hmac_verify_signature(private_key, signature, message):
-    h = hmac.HMAC(private_key, hashes.SHA256())
+def hmac_verify_signature(key, signature, message):
+    h = hmac.HMAC(key, hashes.SHA256())
     h.update(message)
     try:
         h.verify(signature)
@@ -160,11 +164,18 @@ msg = pad_message(b"Test message 1")
 iv = generate_iv()
 
 msg_enc = aes_cbc_encrypt_message(share1, msg, iv)
-hmac_sig = hmac_generate_signature(share1, msg_enc)
+hmac_key1 = get_sha256_hash(share1)
+hmac_sig = hmac_generate_signature(hmac_key1, msg_enc)
 
 # msg_enc, iv and hmac_sig are sent to other client
 
-print("HMAC validation: " + str(hmac_verify_signature(share2, hmac_sig, msg_enc)))
+hmac_key2 = get_sha256_hash(share2)
+print("HMAC validation: " + str(hmac_verify_signature(hmac_key2, hmac_sig, msg_enc)))
 msg_dec = aes_cbc_decrypt_message(share2, msg_enc, iv)
+
+# Once client 2 has validated the HMAC they will send a success message to client 1 
+# Since client 1 sent the message they must now release HMAC key for plausible denyability
+
+# hmac_key1 sent to server to publisize
 
 print(msg_dec)
