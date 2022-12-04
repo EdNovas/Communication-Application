@@ -2,8 +2,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+import threading
+import socket
 
-print("Hello from client")
+#print("Hello from client")
 
 # References:
 
@@ -13,6 +15,40 @@ print("Hello from client")
 # Robert Heaton: Off-The-Record Messaging part 3
 # https://robertheaton.com/otr3
 # A high level overview of the Off-The-Record Messaging Protocol
+
+# Bek Brace: TCP-Chat-Room-Python
+# https://github.com/BekBrace/TCP-Chat-Room-Python-
+
+
+alias = input('Choose an alias >>> ')
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(('127.0.0.1', 59000))
+
+
+def client_receive():
+    while True:
+        try:
+            message = client.recv(1024).decode('utf-8')
+            if message == "alias?":
+                client.sendall(alias.encode('utf-8'))
+            else:
+                print(message)
+                if message == 'leave':
+                    break
+        except:
+            print('Error!')
+            client.close()
+            break
+
+
+def client_send():
+    while True:
+        message = f'{alias}: {input("")}'
+
+        if message == 'leave':
+            break
+        else:
+            client.sendall(message.encode('utf-8'))
 
 # Generate a private key. Must be generated before each usage
 def generate_private_key():
@@ -73,3 +109,10 @@ def generate_shared_key(private_key, peer_public_key):
 # 5. Recieve peer_public_key and signature
 # 6. validate_signature(peer_public_key, signature)
 # 7. generate_shared_key(private_key, peer_public_key)
+
+
+receive_thread = threading.Thread(target=client_receive)
+receive_thread.start()
+
+send_thread = threading.Thread(target=client_send)
+send_thread.start()
