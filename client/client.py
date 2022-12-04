@@ -1,7 +1,12 @@
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import serialization
+import os
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.exceptions import InvalidSignature
 
 print("Hello from client")
 
@@ -9,22 +14,28 @@ print("Hello from client")
 
 # Cryotography docs
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/
+# https://cryptography.io/en/latest/hazmat/primitives/asymmetric/dh/
 
 # Robert Heaton: Off-The-Record Messaging part 3
 # https://robertheaton.com/otr3
 # A high level overview of the Off-The-Record Messaging Protocol
 
-# Generate a private key. Must be generated before each usage
-def generate_private_key():
+################################
+## RSA CRYPTOGRAPHY FUNCTIONS ##
+################################
+
+# Generate a private key, used to register
+def rsa_generate_private_key():
     return rsa.generate_private_key(
         public_exponent=65537,
         key_size=2048,
     )
-    
-def generate_public_key(private_key):
+
+# Generate a public key, passed to server when registering
+def rsa_generate_public_key(private_key):
     return private_key.public_key()
     
-def sign_message(private_key, message):
+def rsa_sign_message(private_key, message):
     return private_key.sign(
         message,
         padding.PSS(
@@ -34,9 +45,8 @@ def sign_message(private_key, message):
         hashes.SHA256()
     )
 
-def validate_signature(peer_public_key, message, signature):
+def rsa_validate_signature(public_key, message, signature):
     try:
-        # verify() will throw InvalidSignature exception if the signature is not valid
         public_key.verify(
             signature,
             message,
@@ -47,52 +57,95 @@ def validate_signature(peer_public_key, message, signature):
             hashes.SHA256()
         )
         return True
-    except:
+    except InvalidSignature:
         return False
     
     
+###########################################
+## DIFFIE-HELLMAN CRYPTOGRAPHY FUNCTIONS ##
+###########################################
+
+parameters = dh.generate_parameters(generator=2, key_size=2048)
+
+# Generate a private key for a single message
+def dh_generate_private_key():
+    return parameters.generate_private_key()
+
+# Get public key from a private key
+def dh_generate_public_key(private_key):
+    return private_key.public_key()
+
+# Get a byte array from a public key so that it can be signed
+def dh_get_public_bytes(public_key):
+    return public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
 
 # Generate a shared key based on private key and the recieved public key
-def generate_shared_key(private_key, peer_public_key):
+def dh_generate_shared_key(private_key, peer_public_key):
     shared_key = private_key.exchange(peer_public_key)
     return HKDF(
         algorithm=hashes.SHA256(),
-        length=2048,
+        length=16, #256 bits for AES 
         salt=None,
         info=None,
     ).derive(shared_key)
 
-def encrypt_message(shared_key, message):
-    return shared_key.public_key().encrypt(
-        message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
+################################
+## AES CRYPTOGRAPHY FUNCTIONS ##
+################################
 
-def decrypt_message(shared_key, message):
-    return shared_key.decrypt(
-        message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    
-# Steps:
-# 1. tmp_private_key = generate_private_key()
-# 2. tmp_public_key = generate_public_key(tmp_private_key)
-# 3. signature = sign_message(private_key, tmp_public_key) << USES account private key
-# 4. send(tmp_public_key) and send(signature)
+# Generate a 128 bit initialization vector
+def generate_iv():
+    return os.urandom(16)
 
-# Once the peer has recieved the public_key and signature they will repeat steps 1-4
+# Encrypt a message with the shared key bytes
+def aes_cbc_encrypt_message(shared_key, message, iv):
+    encryptor = Cipher(algorithms.AES(shared_key), modes.CBC(iv)).encryptor()
+    return encryptor.update(message) + encryptor.finalize()
 
-# 5. Recieve peer_public_key and signature
-# 6. validate_signature(peer_public_key, signature)
+# Decrypt a message with the shared key bytes
+def aes_cbc_decrypt_message(shared_key, message, iv):
+    decryptor = Cipher(algorithms.AES(shared_key), modes.CBC(iv)).decryptor()
+    return decryptor.update(message) + decryptor.finalize()
 
-# If signature is invalid then cancel the communication
+# This funstion pads a message until its size is a multiple of 16
+def pad_message(message):
+    while len(message) % 16 != 0:
+        message += b' '
+    return message
 
-# 7. generate_shared_key(private_key, peer_public_key)
+
+# The code below shows how will we can use these functions for Diffie-Hellman and message encryption and decryption
+
+rsa_priv1 = rsa_generate_private_key()
+rsa_pub1 = rsa_generate_public_key(rsa_priv1)
+dh_priv1 = dh_generate_private_key()
+dh_pub1 = dh_generate_public_key(dh_priv1)
+signature1 = rsa_sign_message(rsa_priv1, dh_get_public_bytes(dh_pub1))
+
+rsa_priv2 = rsa_generate_private_key()
+rsa_pub2 = rsa_generate_public_key(rsa_priv2)
+dh_priv2 = dh_generate_private_key()
+dh_pub2 = dh_generate_public_key(dh_priv2)
+signature2 = rsa_sign_message(rsa_priv2, dh_get_public_bytes(dh_pub2))
+
+# Signature and dh_pub are sent to other client (rsa_pub should already be know to other client from server)
+
+print("Client 1 validation: " + str(rsa_validate_signature(rsa_pub2, dh_get_public_bytes(dh_pub2), signature2)))
+print("Client 2 validation: " + str(rsa_validate_signature(rsa_pub1, dh_get_public_bytes(dh_pub1), signature1)))
+
+share1 = dh_generate_shared_key(dh_priv1, dh_pub2)
+share2 = dh_generate_shared_key(dh_priv2, dh_pub1)
+
+msg = pad_message(b"Test message 1")
+iv = generate_iv()
+
+msg_enc = aes_cbc_encrypt_message(share1, msg, iv)
+
+# msg_enc and iv are sent to other client
+
+msg_dec = aes_cbc_decrypt_message(share2, msg_enc, iv)
+
+print(msg_dec)
