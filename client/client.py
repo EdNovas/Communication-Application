@@ -1,12 +1,9 @@
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.asymmetric import dh
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import serialization
-import os
+from cryptography.hazmat.primitives import hashes, serialization, hmac
+from cryptography.hazmat.primitives.asymmetric import rsa, dh, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.exceptions import InvalidSignature
+import os
 
 print("Hello from client")
 
@@ -15,6 +12,7 @@ print("Hello from client")
 # Cryotography docs
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/dh/
+# https://cryptography.io/en/latest/hazmat/primitives/mac/hmac/
 
 # Robert Heaton: Off-The-Record Messaging part 3
 # https://robertheaton.com/otr3
@@ -116,6 +114,25 @@ def pad_message(message):
         message += b' '
     return message
 
+#################################
+## HMAC CRYPTOGRAPHY FUNCTIONS ##
+#################################
+
+def hmac_generate_signature(private_key, message):
+    h = hmac.HMAC(private_key, hashes.SHA256())
+    h.update(message)
+    return h.finalize()
+
+def hmac_verify_signature(private_key, signature, message):
+    h = hmac.HMAC(private_key, hashes.SHA256())
+    h.update(message)
+    try:
+        h.verify(signature)
+        return True
+    except InvalidSignature:
+        return False
+
+
 
 # The code below shows how will we can use these functions for Diffie-Hellman and message encryption and decryption
 
@@ -143,9 +160,11 @@ msg = pad_message(b"Test message 1")
 iv = generate_iv()
 
 msg_enc = aes_cbc_encrypt_message(share1, msg, iv)
+hmac_sig = hmac_generate_signature(share1, msg_enc)
 
-# msg_enc and iv are sent to other client
+# msg_enc, iv and hmac_sig are sent to other client
 
+print("HMAC validation: " + str(hmac_verify_signature(share2, hmac_sig, msg_enc)))
 msg_dec = aes_cbc_decrypt_message(share2, msg_enc, iv)
 
 print(msg_dec)
