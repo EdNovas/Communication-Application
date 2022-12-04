@@ -60,26 +60,16 @@ def generate_shared_key(private_key, peer_public_key):
         info=b'handshake data',
     ).derive(shared_key)
 
-print("Hello, welcome to our communication application. ")
+def main():
+    print("Hello, welcome to our communication application. ")
 
-account_status = input("Do you have an account already?(y/n): ")
-
-if (account_status == 'n' or account_status == 'N'):
     new_account = input("Please register your account name(only alphabet is allowed): ")
     while (True):
         if (new_account.isalpha()):
             break
         else:
             new_account = input("Please register your account name with only alphabet: ")
-    new_password = getpass.getpass("Password: ")
-    # store the account and password into server database
-elif (account_status == 'y' or account_status == 'Y'):
-    account = input("Your account name: ")
-    password = getpass.getpass("Your Password: ")
-    # deliver the account and password info to the server end, and verify the account and password
-else:
-    print("Sorry, that's not a valid answer. You should use y or n")
-    exit(1)
+
     
 # Steps:
 # 1. generate_private_key()
