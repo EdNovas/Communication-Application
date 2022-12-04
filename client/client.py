@@ -57,19 +57,42 @@ def generate_shared_key(private_key, peer_public_key):
     shared_key = private_key.exchange(peer_public_key)
     return HKDF(
         algorithm=hashes.SHA256(),
-        length=32,
+        length=2048,
         salt=None,
-        info=b'handshake data',
+        info=None,
     ).derive(shared_key)
+
+def encrypt_message(shared_key, message):
+    return shared_key.public_key().encrypt(
+        message,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
+def decrypt_message(shared_key, message):
+    return shared_key.decrypt(
+        message,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
     
 # Steps:
-# 1. generate_private_key()
-# 2. generate_public_key(private_key)
-# 3. sign_message(private_key, public_key)
-# 4. send(public_key) and send(signature)
+# 1. tmp_private_key = generate_private_key()
+# 2. tmp_public_key = generate_public_key(tmp_private_key)
+# 3. signature = sign_message(private_key, tmp_public_key) << USES account private key
+# 4. send(tmp_public_key) and send(signature)
 
 # Once the peer has recieved the public_key and signature they will repeat steps 1-4
 
 # 5. Recieve peer_public_key and signature
 # 6. validate_signature(peer_public_key, signature)
+
+# If signature is invalid then cancel the communication
+
 # 7. generate_shared_key(private_key, peer_public_key)
