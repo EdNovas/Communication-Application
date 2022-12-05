@@ -160,14 +160,14 @@ def get_register_message(username, rsa_public_key):
 
     padded_username = pad_string(username)
     key_string = str(rsa_get_public_bytes(rsa_public_key))
-    return "r" + padded_username + key_string
+    return "r" + "#" + padded_username + "#" + key_string
 
 # Get string in the following format: "r"[16 bytes username]
 def get_login_message1(username):
     if len(username) > 16: raise Exception("Username must be max 16 characters")
     
     padded_username = pad_string(username)
-    return "l" + padded_username
+    return "l" + "#" + padded_username
 
 # Get string in the following format: "s"[16 bytes username][rsa signature]
 def get_login_message2(username, signature):
@@ -175,7 +175,7 @@ def get_login_message2(username, signature):
     
     padded_username = pad_string(username)
     signature_str = str(signature)
-    return "s" + padded_username + signature_str
+    return "s" + "#" + padded_username + "#" + signature_str
 
 # Get string in the following format: "m"[16 bytes username][16 bytes rsa signature][DH public key] 
 def get_message1(username, rsa_signature, dh_public_key):
@@ -185,7 +185,7 @@ def get_message1(username, rsa_signature, dh_public_key):
     padded_username = pad_string(username)
     rsa_signature_str = str(rsa_signature)
     dh_public_key_str = str(dh_get_public_bytes(dh_public_key))
-    return "m" + padded_username + rsa_signature_str + dh_public_key_str
+    return "m" + "#" + padded_username + "#" + rsa_signature_str + "#" + dh_public_key_str
 
 # Get string in the following format: "b"[16 bytes rsa signature][16 bytes iv][DH public key] 
 def get_message1_response(rsa_signature, dh_public_key):
@@ -193,7 +193,7 @@ def get_message1_response(rsa_signature, dh_public_key):
     
     rsa_signature_str = str(rsa_signature)
     dh_public_key_str = str(dh_get_public_bytes(dh_public_key))
-    return "b" + rsa_signature_str + dh_public_key_str
+    return "b" + "#" + rsa_signature_str + "#" + dh_public_key_str
 
 # Get string in the following format: "n"[16 bytes hmac signature][16 bytes iv][Encrypted message]
 def get_message2(hmac, iv, message):
@@ -203,10 +203,42 @@ def get_message2(hmac, iv, message):
     hmac_str = str(hmac)
     iv_str = str(iv)
     message_str = str(message)
-    return "n" + padded_username + hmac_str + dh_public_key_str + message_str
+    return "n" + "#" + padded_username + "#" + hmac_str + "#" + dh_public_key_str + "#" + message_str
 
 def parse_message(message):
-    command = message[0]
+    command = message.split("#", 1)
+    if (command[0] == "r"):
+        message1 = command[1]
+        data1 = message1.split("#", 1)
+        padded_username_r = data1[0]
+        key_string = data1[1]
+    elif (command[0] == "l"):
+        padded_username_l == command[1]
+    elif (command[0] == "s"):
+        message2 = command[1]
+        data2 = message2.split("#", 1)
+        padded_username_s = data2[0]
+        signature_str = data2[1]
+    elif (command[0] == "m"):
+        message3 = command[1]
+        data3 = message3.split("#", 2)
+        padded_username_m = data3[0]
+        rsa_signature_str_m = data3[1]
+        dh_public_key_str = data3[2]
+    elif (command[0] == "b"):
+        message4 = command[1]
+        data4 = message4.split("#", 1)
+        rsa_signature_str_b = data4[0]
+        dh_public_key_str_b = data4[1]
+    elif (command[0] == "n"):
+        message5 = command[1]
+        data5 = message5.split("#", 3)
+        padded_username_n = data5[0]
+        hmac_str = data5[1]
+        dh_public_key_str = data5[2]
+        message_str = data5[3]
+    else:
+        print("not a valid message")
     # TODO
 
 
