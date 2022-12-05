@@ -246,6 +246,7 @@ def parse_message(message):
 
     elif (message[0] == "m"):
         # Message part 1 (another client is attempting to send a message to this client)
+        # Note: This message is changed by the server and is different than the one that was sent by the other client
         padded_username_m = message[1:17]
         rsa_signature_str_m = message[17:33]
         dh_public_key_str = message[33:]
