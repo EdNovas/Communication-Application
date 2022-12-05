@@ -44,7 +44,7 @@ After run the client program, you can use `help` or `h` will show the help menu.
 
 `quit` or `q` can exit the program safely.
 
-## More guides
+## What's more
 
 For more information and more detailed usage guides, please check the [Documentation](https://gitlab.csc.uvic.ca/courses/2022091/SENG360_COSI/assignments/erikmckelvey/project-group-18/-/wikis/Documentation)
 
