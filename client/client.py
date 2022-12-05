@@ -42,6 +42,13 @@ def rsa_generate_public_key(private_key):
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
 
+# Get private bytes, used to save the private key to a file
+def rsa_get_private_bytes(private_key):
+    return private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
 # Get public bytes, used to send the public key in a message
 def rsa_get_public_bytes(public_key):
     return public_key.public_bytes(
@@ -290,15 +297,20 @@ def register_cmd():
     rsa_priv = rsa_generate_private_key()
     rsa_pub = rsa_generate_public_key(rsa_priv)
 
-    print("Saving new private key file...")
-    # TODO save rsa_priv to file
-
     username = ""
     while True:
         username = input("Please input a username: ")
         if len(username) > 0 and len(username) < 16:
             break
         print("Username must be between 1 and 16 characters")
+
+    print("Saving new private key file...")
+    file_name = username + ".pem"
+    file_contents = rsa_get_private_bytes(rsa_priv).decode('utf-8')
+    with open(file_name, 'w') as file:
+        file.write(file_contents)
+    print("Done. Please move the file to a secure location")
+
     message = get_register_message(username, rsa_priv)
     client_send(message)
     loggedIn = True
