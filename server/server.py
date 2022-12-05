@@ -106,11 +106,16 @@ def parse_message(client, message):
             return
 
         # Parse message, and create new message with sender username and RSA public key
-        padded_username_m = message[1:17]
         rsa_signature_str_m = message[17:33]
         dh_public_key_str = message[33:]
+
+        sender_username = clientInfo[index][0]
+        sender_rsa_pub = read_account(sender_username)
+        dh_length = len(dh_public_key_str).to_bytes(2, 'little').decode('utf-8')
+
+        new_message = "m" + sender_username + rsa_signature_str_m + dh_length + dh_public_key_str + sender_rsa_pub 
         
-        clients[receiver_index[0]].sendall(message)
+        clients[receiver_index[0]].sendall(new_message)
         clientInfo[receiver_index[0]][3] = clientInfo[index][0]
 
     elif (message[0] == "b"):
@@ -120,6 +125,8 @@ def parse_message(client, message):
         if len(receiver_index) < 1:
             # No error message since this user did not initiate the request
             return
+
+        # TODO This is not finished
         
         clients[receiver_index[0]].sendall(message)
 
@@ -131,6 +138,8 @@ def parse_message(client, message):
         if len(receiver_index) < 1:
             client.sendall("eUser does not exist, or is not logged in")
             return
+
+        # TODO This is not finished
             
         clients[receiver_index[0]].sendall(message)
 

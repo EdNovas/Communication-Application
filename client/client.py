@@ -35,10 +35,13 @@ def rsa_generate_private_key():
         key_size=2048,
     )
 
-# Import a private key that was read from a PEMfile
-def rsa_import_private_key(private_key_bytes):
-    return serialization.load_pem_private_key(private_key_bytes, password=None)
+# Import a private key that was read from a PEM file
+def rsa_import_private_key(private_key_pem):
+    return serialization.load_pem_private_key(private_key_pem, password=None)
 
+# Import a public key that was read from a PEM file
+def rsa_import_public_key(public_key_pem):
+    return serialization.load_pem_public_key(private_key_pem, password=None)
 
 # Generate a public key from private key
 def rsa_generate_public_key(private_key):
@@ -205,13 +208,15 @@ def get_message1(username, rsa_signature, dh_public_key):
     dh_public_key_str = dh_get_public_bytes(dh_public_key).decode('utf-8')
     return "m" + padded_username + rsa_signature_str + dh_public_key_str
 
-# Get string in the following format: "b"[16 bytes rsa signature][16 bytes iv][DH public key] 
-def get_message1_response(rsa_signature, dh_public_key):
+# Get string in the following format: "b"[16 bytes username][16 bytes rsa signature][16 bytes iv][DH public key] 
+def get_message1_response(username, rsa_signature, dh_public_key):
+    if len(username) > 16: raise Exception("Username must be max 16 characters")
     if len(rsa_signature) != 16: raise Exception("RSA signature must be of length 16")
     
+    padded_username = pad_string(username)
     rsa_signature_str = rsa_signature.decode('utf-8')
     dh_public_key_str = dh_get_public_bytes(dh_public_key).decode('utf-8')
-    return "b" + rsa_signature_str + dh_public_key_str
+    return "b" + padded_username + rsa_signature_str + dh_public_key_str
 
 # Get string in the following format: "n"[16 bytes hmac signature][16 bytes iv][Encrypted message]
 def get_message2(hmac, iv, message):
@@ -249,25 +254,56 @@ def parse_message(message):
     elif (message[0] == "m"):
         # Message part 1 (another client is attempting to send a message to this client)
         # Note: This message is changed by the server and is different than the one that was sent by the other client
-        padded_username_m = message[1:17]
-        rsa_signature_str_m = message[17:33]
-        dh_public_key_str = message[33:]
+        if loggedIn == False:
+            print("Error. Message request received but not logged in")
+            print("Please try logging in again")
+            return
+        if rsa_priv_global == None:
+            print("Error. Message request received but no RSA key found")
+            print("Please try logging in again")
+            return
+
+        padded_username = message[1:17]
+        sender_rsa_signature = message[17:33].encode('utf-8')
+        dh_public_key_len = int.from_bytes(message[33:35].encode('utf-8'), 'little', signed=False)
+        sender_dh_public_key_pem = message[35:35+dh_public_key_len]
+        sender_rsa_pub_pem = message[35+dh_public_key_len:]
+
+        sender_rsa_pub = rsa_import_public_key(sender_rsa_pub_bytes)
+        if rsa_validate_signature(sender_rsa_pub, sender_dh_public_key_pem, sender_rsa_signature) == False:
+            print("Invalid message received")
+            return
+        
+        dh_priv_global = dh_generate_private_key()
+        dh_pub = dh_generate_public_key(dh_priv_global)
+        rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
+
+        message = get_message1_response(padded_username, rsa_signature, dh_pub)
+        client_send(message)
+
+    elif (message[0] == "b"):
+        # Message part 1 response (another client responded to this clients message request)
+        # Note: This message is changed by the server and is different than the one that was sent by the other client
+
+        # TODO This is not finished
+
+        rsa_signature_str_b = message[1:17]
+        dh_public_key_str_b = message[17:]
 
     elif (message[0] == "n"):
         # Message part 2
+        # Note: This message is changed by the server and is different than the one that was sent by the other client
+
+        # TODO This is not finished
+
         padded_username_n = message[1:17]
         hmac_str = message[17:33]
         iv_str = message[33:49]
         message_str = message[49:]
-
-    elif (message[0] == "b"):
-        # Message part 1 response (another client responded to this clients message request)
-        rsa_signature_str_b = message[1:17]
-        dh_public_key_str_b = message[17:]
         
     else:
-        print("not a valid message")
-    # TODO
+        # Invalid message recieved, it will be ignored
+    
 
 ######################
 ## SOCKET FUNCTIONS ##
