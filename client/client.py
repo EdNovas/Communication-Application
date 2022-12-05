@@ -212,7 +212,7 @@ def get_message2(hmac, iv, message):
     hmac_str = str(hmac)
     iv_str = str(iv)
     message_str = str(message)
-    return "n" + padded_username + hmac_str + iv_str + message_str
+    return "n" + hmac_str + iv_str + message_str
 
 def parse_message(message):
     if (message[0] == "r"):
@@ -231,13 +231,12 @@ def parse_message(message):
         rsa_signature_str_b = message[1:17]
         dh_public_key_str_b = message[17:]
     elif (message[0] == "n"):
-        padded_username_n = message[1:17]
-        hmac_str = message[17:33]
-        iv_str = message[33:49]
-        message_str = message[49:]
+        hmac_str = message[1:17]
+        iv_str = message[17:33]
+        message_str = message[33:]
     else:
         print("not a valid message")
-    # TODO
+    
 
 ######################
 ## SOCKET FUNCTIONS ##
@@ -297,12 +296,29 @@ def register_cmd():
 
 def login_cmd():
     # TODO
+    while True:
+        username = input("Please input your existing username: ")
+        if len(username) > 0 and len(username) < 16:
+            break
+        print("Username must be between 1 and 16 characters")
+    message = get_login_message1(username)
+    client_send(message)
     loggedIn = True
 
 def message_cmd():
     if !(loggedIn):
         print("You must log in first to send a messge")
         return
+    while True:
+        username = input("Who do you want to message, input his/her username: ")
+        if len(username) > 0 and len(username) < 16:
+            break
+        print("Username must be between 1 and 16 characters")
+    message = get_message1(username, rsa_signature, dh_public_key)
+    client_send(message)
+
+    message = get_message2(hmac, iv, message)
+    client_send(message)
     # TODO
 
 def view_cmd():
