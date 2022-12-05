@@ -31,7 +31,14 @@ def rsa_generate_private_key():
 
 # Generate a public key, passed to server when registering
 def rsa_generate_public_key(private_key):
-    return private_key.public_key()
+    return private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+# Get public bytes, used to send the public key in a message
+def rsa_get_public_bytes(public_key):
+    return public_key.public
     
 def rsa_sign_message(private_key, message):
     return private_key.sign(
@@ -108,7 +115,7 @@ def aes_cbc_decrypt_message(shared_key, message, iv):
     decryptor = Cipher(algorithms.AES(shared_key), modes.CBC(iv)).decryptor()
     return decryptor.update(message) + decryptor.finalize()
 
-# This funstion pads a message until its size is a multiple of 16
+# This function pads a message (bytes) until its size is a multiple of 16
 def pad_message(message):
     while len(message) % 16 != 0:
         message += b' '
@@ -135,6 +142,72 @@ def hmac_verify_signature(key, signature, message):
         return True
     except InvalidSignature:
         return False
+
+
+##################################
+## MESSAGE FORMATTING FUNCTIONS ##
+##################################
+
+# Pad a string with spaces until it has 16 charcters
+def pad_string(message):
+    while len(message) % 16 != 0:
+        message += ' '
+    return message
+
+# Get string in the following format: "r"[16 bytes username][rsa public key in PEM format]
+def get_register_message(username, rsa_public_key):
+    if len(username) > 16: raise Exception("Username must be max 16 characters")
+
+    padded_username = pad_string(username)
+    key_string = str(rsa_get_public_bytes(rsa_public_key))
+    return "r" + padded_username + key_string
+
+# Get string in the following format: "r"[16 bytes username]
+def get_login_message1(username):
+    if len(username) > 16: raise Exception("Username must be max 16 characters")
+    
+    padded_username = pad_string(username)
+    return "l" + padded_username
+
+# Get string in the following format: "s"[16 bytes username][rsa signature]
+def get_login_message2(username, signature):
+    if len(username) > 16: raise Exception("Username must be max 16 characters")
+    
+    padded_username = pad_string(username)
+    signature_str = str(signature)
+    return "s" + padded_username + signature_str
+
+# Get string in the following format: "m"[16 bytes username][16 bytes rsa signature][DH public key] 
+def get_message1(username, rsa_signature, dh_public_key):
+    if len(username) > 16: raise Exception("Username must be max 16 characters")
+    if len(rsa_signature) != 16: raise Exception("RSA signature must be of length 16")
+    
+    padded_username = pad_string(username)
+    rsa_signature_str = str(rsa_signature)
+    dh_public_key_str = str(dh_get_public_bytes(dh_public_key))
+    return "m" + padded_username + rsa_signature_str + dh_public_key_str
+
+# Get string in the following format: "b"[16 bytes rsa signature][16 bytes iv][DH public key] 
+def get_message1_response(rsa_signature, dh_public_key):
+    if len(rsa_signature) != 16: raise Exception("RSA signature must be of length 16")
+    
+    rsa_signature_str = str(rsa_signature)
+    dh_public_key_str = str(dh_get_public_bytes(dh_public_key))
+    return "b" + rsa_signature_str + dh_public_key_str
+
+# Get string in the following format: "n"[16 bytes hmac signature][16 bytes iv][Encrypted message]
+def get_message2(hmac, iv, message):
+    if len(hmac) != 16: raise Exception("HMAC must be of length 16")
+    if len(iv) != 16: raise Exception("IV must be of length 16")
+    
+    hmac_str = str(hmac)
+    iv_str = str(iv)
+    message_str = str(message)
+    return "n" + padded_username + hmac_str + dh_public_key_str + message_str
+
+def parse_message(message):
+    command = message[0]
+    # TODO
 
 
 
