@@ -25,6 +25,10 @@ def handle_client(client):
             if message == "q":
                 remove_client(client)
                 break
+            elif message == "u":
+                index = clients.index(client) 
+                clientInfo[index] = (None, False, None, None)
+                continue
             parse_message(client, message)
         except:
             remove_client(client)
