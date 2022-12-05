@@ -22,7 +22,7 @@ def handle_client(client):
         try:
             # Wait for a message from client
             message = bytearray(client.recv(1024))
-            code = message[0].decode('utf-8')
+            code = bytes(message[0]).decode('utf-8')
 
             # Handle message
             if code == "q":
@@ -47,7 +47,7 @@ def remove_client():
 def parse_message(client, message):
     index = clients.index(client)
 
-    code = message[0].decode('utf-8')
+    code = bytes(message[0]).decode('utf-8')
     if (code == "r"):
         # Register
         padded_username = message[1:17].decode('utf-8')
@@ -68,7 +68,7 @@ def parse_message(client, message):
         
         public_key = read_account(padded_username)
         if public_key == None:
-            client.sendall("eUsername not found")
+            client.sendall(b"eUsername not found")
             return
         
         nonce = os.urandom(16)
@@ -83,18 +83,18 @@ def parse_message(client, message):
 
         nonce = clientInfo[index][2]
         if nonce == None:
-            client.sendall("eMust send login part 1 first")
+            client.sendall(b"eMust send login part 1 first")
             return
 
         public_key_str = read_account(padded_username)
         if (public_key_str == None):
-            client.sendall("eUsername not found")
+            client.sendall(b"eUsername not found")
             return
         
         public_key = serialization.load_pem_public_key(public_key_str.encode('utf-8'))
 
         if rsa_validate_signature(public_key, nonce, signature) == False:
-            client.sendall("eInvalid signature")
+            client.sendall(b"eInvalid signature")
             return
 
         clientInfo[index][0] = padded_username
@@ -103,14 +103,14 @@ def parse_message(client, message):
     elif (code == "m"):
         # Message part 1
         if clientInfo[index][1] == False:
-            client.sendall("eYou must be logged in to send a message")
+            client.sendall(b"eYou must be logged in to send a message")
             return
 
         padded_username = message[1:17].decode('utf-8')
 
         receiver_index = [idx for idx, tup in enumerate(clientInfo) if tup[0] == padded_username]
         if len(receiver_index) < 1:
-            client.sendall("eUser does not exist, or is not logged in")
+            client.sendall(b"eUser does not exist, or is not logged in")
             return
 
         # Parse message, and create new message with sender username and RSA public key
@@ -128,8 +128,8 @@ def parse_message(client, message):
     elif (code == "b"):
         # Message part 1 response
         if clientInfo[index][1] == False:
-            client.sendall("eError. Message response sent, but you are not logged in")
-            client.sendall("ePlease try logging in again")
+            client.sendall(b"eError. Message response sent, but you are not logged in")
+            client.sendall(b"ePlease try logging in again")
             return
         
         padded_username = message[1:17].decode('utf-8')
@@ -154,15 +154,15 @@ def parse_message(client, message):
     elif (code == "n"):
         # Message part 2
         if clientInfo[index][1] == False:
-            client.sendall("eError. Message response sent, but you are not logged in")
-            client.sendall("ePlease try logging in again")
+            client.sendall(b"eError. Message response sent, but you are not logged in")
+            client.sendall(b"ePlease try logging in again")
             return
         
         padded_username = message[1:17].decode('utf-8')
         
         receiver_index = [idx for idx, tup in enumerate(clientInfo) if tup[0] == padded_username]
         if len(receiver_index) < 1:
-            client.sendall("eUser does not exist, or is not logged in")
+            client.sendall(b"eUser does not exist, or is not logged in")
             return
 
         sender_username = clientInfo[index][0]

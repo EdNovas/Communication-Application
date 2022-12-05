@@ -456,7 +456,7 @@ def message_cmd():
     dh_pub = dh_generate_public_key(dh_priv_global)
     rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
 
-    username_bytes = pad_string(msg_sername).encode('utf-8')
+    username_bytes = pad_string(msg_username).encode('utf-8')
     dh_public_key_bytes = dh_get_public_bytes(dh_pub)
 
     # Get byte array in the following format: b"m"[16 bytes username][256 bytes rsa signature][DH public key] 
@@ -475,11 +475,11 @@ def delete_cmd():
 def logout_cmd():
     global loggedIn
 
-    client_send("u")
+    client_send(b"u")
     loggedIn = False
 
 def quit_cmd():
-    client_send("q")
+    client_send(b"q")
     exit()
 
 def write_msg_history(username, message):
@@ -519,21 +519,21 @@ def main():
     print("Input h to see a list of available commands")
     while(True):
         cmd = input("> ")
-        if (cmd == "h" or cmd == "help"):
+        if (cmd[0] == "h"):
             help_cmd()
-        if (cmd == "r" or cmd == "register"):
+        if (cmd[0] == "r"):
             register_cmd()
-        if (cmd == "l" or cmd == "login"):
+        if (cmd[0] == "l"):
             login_cmd()
-        if (cmd == "m" or cmd == "message"):
+        if (cmd[0] == "m"):
             message_cmd()
-        if (cmd == "v" or cmd == "view"):
+        if (cmd[0] == "v"):
             view_cmd()
-        if (cmd == "d" or cmd == "delete"):
+        if (cmd[0] == "d"):
             delete_cmd()
-        if (cmd == "u" or cmd == "logout"):
+        if (cmd[0] == "u" or cmd == "logout"):
             logout_cmd()
-        if (cmd == "q" or cmd == "quit"):
+        if (cmd[0] == "q"):
             quit_cmd()
 
 if __name__ == "__main__":
