@@ -337,12 +337,13 @@ def parse_message(message):
 ######################
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print("Connecting...")
 client.connect(('172.19.0.2', 59000))
 
 def client_receive():
     while True:
         try:
-            message = client.recv(1024).decode('utf-8')
+            message = client.recv(1024)
             parse_message(message)
         except:
             print('Socket error')
@@ -352,7 +353,7 @@ def client_receive():
 
 
 def client_send(message):
-    client.sendall(message.encode('utf-8'))
+    client.sendall(message)
 
 ##############
 ## COMMANDS ##
