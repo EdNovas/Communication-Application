@@ -252,7 +252,7 @@ def parse_message(message):
 ######################
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('127.0.0.1', 59000))
+client.connect(('172.19.0.2', 59000))
 loggedIn = False
 
 def client_receive():
@@ -386,7 +386,7 @@ print(msg_dec)
 
 def main():
     # Start a thread to accept any messages
-    thread = threading.Thread(target=handle_client, args=(client,))
+    thread = threading.Thread(target=client_receive)
     thread.start()
     print("Welcome to encrypted messenger")
     print("Input h to see a list of available commands")

@@ -6,7 +6,7 @@ import csv
 import threading
 import socket
 
-host = '127.0.0.1'
+host = '0.0.0.0'
 port = 59000
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((host, port))
@@ -183,7 +183,7 @@ def main():
         print(conn_msg)
 
         clients.append(client)
-        clientInfo.append(None, False, None, None)
+        clientInfo.append((None, False, None, None))
         
         thread = threading.Thread(target=handle_client, args=(client,))
         thread.start()
