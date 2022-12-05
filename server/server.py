@@ -105,7 +105,7 @@ def parse_message(client, message):
             client.sendall("eUser does not exist, or is not logged in")
             return
 
-        # Parse message, and create new message with sender RSA public key
+        # Parse message, and create new message with sender username and RSA public key
         padded_username_m = message[1:17]
         rsa_signature_str_m = message[17:33]
         dh_public_key_str = message[33:]

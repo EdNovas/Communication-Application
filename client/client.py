@@ -35,12 +35,14 @@ def rsa_generate_private_key():
         key_size=2048,
     )
 
-# Generate a public key, passed to server when registering
+# Import a private key that was read from a PEMfile
+def rsa_import_private_key(private_key_bytes):
+    return serialization.load_pem_public_key(private_key_bytes, password=None)
+
+
+# Generate a public key from private key
 def rsa_generate_public_key(private_key):
-    return private_key.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
+    return private_key.public_key()
 
 # Get private bytes, used to save the private key to a file
 def rsa_get_private_bytes(private_key):
