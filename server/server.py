@@ -6,7 +6,7 @@ import csv
 import threading
 import socket
 
-host = '172.18.0.4'
+host = '127.0.0.1'
 port = 59000
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((host, port))
@@ -45,7 +45,7 @@ def parse_message(client, message):
         padded_username = message[1:17]
         key_string = message[17:]
 
-        if !(register_account(padded_username, key_string)):
+        if register_account(padded_username, key_string) == False:
             client.sendall("eUsername is taken")
             return
         clientInfo[index][0] = padded_username
@@ -81,7 +81,7 @@ def parse_message(client, message):
         public_key = serialization.load_pem_public_key(public_key_str.encode('utf-8'))
         signature = signature_str.encode('utf-8')
 
-        if !(rsa_validate_signature(public_key, nonce, signature)):
+        if rsa_validate_signature(public_key, nonce, signature) == False:
             client.sendall("eInvalid signature")
             return
 
@@ -174,8 +174,6 @@ def rsa_validate_signature(public_key, message, signature):
         return False
 
 
-if __name__ == "__main__":
-    main()
 
 def main():
     initialize_csv()
@@ -189,3 +187,6 @@ def main():
         
         thread = threading.Thread(target=handle_client, args=(client,))
         thread.start()
+
+if __name__ == "__main__":
+    main()

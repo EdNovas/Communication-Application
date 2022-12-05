@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.exceptions import InvalidSignature
 import os
 import threading
-import Socket
+import socket
 
 
 # References:
@@ -252,7 +252,7 @@ def parse_message(message):
 ######################
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('172.18.0.4', 59000))
+client.connect(('127.0.0.1', 59000))
 loggedIn = False
 
 def client_receive():
@@ -308,16 +308,18 @@ def login_cmd():
     loggedIn = True
 
 def message_cmd():
-    if !(loggedIn):
+    if loggedIn == False:
         print("You must log in first to send a messge")
         return
     # TODO
 
 def view_cmd():
     # TODO
+    return
 
 def delete_cmd():
     # TODO
+    return
 
 def logout_cmd():
     client_send("u")
@@ -382,9 +384,6 @@ print(msg_dec)
 ## MAIN ##
 ##########
 
-if __name__ == "__main__":
-    main()
-
 def main():
     # Start a thread to accept any messages
     thread = threading.Thread(target=handle_client, args=(client,))
@@ -409,3 +408,6 @@ def main():
             logout_cmd()
         if (cmd == "q" or cmd == "quit"):
             quit_cmd()
+
+if __name__ == "__main__":
+    main()
