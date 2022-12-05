@@ -412,8 +412,11 @@ def read_msg_history(username):
     pem = open(username + ".pem")
     if os.path.exists(username + ".txt"):
         f = open(username + ".txt")
-        decrypted_msg = rsa_decrypt_message(rsa_import_private_key(pem), f.read())
-        print(decrypted_msg)
+        r = f.read()
+        s = r.split("kesterissmartandcool")
+        for x in s:
+            decrypted_msg = rsa_decrypt_message(rsa_import_private_key(pem), x)
+            print(decrypted_msg)
     else:
         print("There is no chat history between you and " + username)
 
