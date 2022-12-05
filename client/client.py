@@ -310,14 +310,11 @@ def message_cmd():
         print("You must log in first to send a messge")
         return
     while True:
-        username = input("Who do you want to message, input his/her username: ")
-        if len(username) > 0 and len(username) < 16:
+        msg_username = input("Who do you want to message, input his/her username: ")
+        if len(msg_username) > 0 and len(msg_username) < 16:
             break
         print("Username must be between 1 and 16 characters")
-    message = get_message1(username, rsa_signature, dh_public_key)
-    client_send(message)
-
-    message = get_message2(hmac, iv, message)
+    message = get_message1(msg_username, rsa_signature, dh_public_key)
     client_send(message)
     # TODO
 
