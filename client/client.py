@@ -43,6 +43,11 @@ def rsa_generate_private_key():
         key_size=2048,
     )
 
+# Import a private key that was read from a PEM file
+def rsa_import_private_key(private_key_bytes):
+    return serialization.load_pem_private_key(private_key_bytes, password=None)
+
+
 # Generate a public key from private key
 def rsa_generate_public_key(private_key):
     return private_key.public_key()
@@ -86,7 +91,26 @@ def rsa_validate_signature(public_key, message, signature):
         return True
     except InvalidSignature:
         return False
-    
+
+def rsa_encrypt_message(public_key, message):
+    return public_key.encrypt(
+        message,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
+def rsa_decrypt_message(private_key, message):
+    return private_key.decrypt(
+        message,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
     
 ###########################################
 ## DIFFIE-HELLMAN CRYPTOGRAPHY FUNCTIONS ##
@@ -457,6 +481,30 @@ def quit_cmd():
     client_send("q")
     exit()
 
+def write_msg_history(username, message):
+    pem = open(username + ".pem")
+    f = open(username + ".txt", "a")
+    encrypted_msg = rsa_encrypt_message(rsa_generate_public_key(rsa_import_private_key(pem)), pad_string(username + ":" + message)) + "kesterissmartandcool"
+    f.write(encrypted_msg)
+    f.close()
+
+def read_msg_history(username):
+    pem = open(username + ".pem")
+    if os.path.exists(username + ".txt"):
+        f = open(username + ".txt")
+        r = f.read()
+        s = r.split("kesterissmartandcool")
+        for x in s:
+            decrypted_msg = rsa_decrypt_message(rsa_import_private_key(pem), x)
+            print(decrypted_msg)
+    else:
+        print("There is no chat history between you and " + username)
+
+def delete_msg_history(username):
+    if os.path.exists(username + ".txt"):
+        os.remove(username + ".txt")
+    else:
+        print("There is no chat history between you and " + username)
 
 ##########
 ## MAIN ##
