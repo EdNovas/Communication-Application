@@ -42,6 +42,13 @@ def rsa_generate_public_key(private_key):
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
 
+# Get private bytes, used to save the private key to a file
+def rsa_get_private_bytes(private_key):
+    return private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
 # Get public bytes, used to send the public key in a message
 def rsa_get_public_bytes(public_key):
     return public_key.public_bytes(
@@ -218,7 +225,19 @@ def parse_message(message):
     if (message[0] == "l"):
         # Login part 1 response
         nonce = message[1:]
-        # TODO get RSA private key and send signature of nonce
+        if rsa_priv_global == None:
+            print("Error. Log in response received but no RSA key found")
+            print("Please try logging in again")
+            return
+        if username_global == "":
+            print("Error. Log in response received but no username found")
+            print("Please try logging in again")
+            return
+
+        signature = rsa_sign_message(rsa_priv_global, nonce.encode('utf-8'))
+        message = get_login_message2(username_global, signature)
+        client_send(message)
+        loggedIn = True
     
     elif (message[0] == "e"):
         # Error message from server
@@ -226,15 +245,11 @@ def parse_message(message):
         print(print_msg)
 
     elif (message[0] == "m"):
-        # Message part 1
+        # Message part 1 (another client is attempting to send a message to this client)
+        # Note: This message is changed by the server and is different than the one that was sent by the other client
         padded_username_m = message[1:17]
         rsa_signature_str_m = message[17:33]
         dh_public_key_str = message[33:]
-
-    elif (message[0] == "b"):
-        # Message part 1 response
-        rsa_signature_str_b = message[1:17]
-        dh_public_key_str_b = message[17:]
 
     elif (message[0] == "n"):
         # Message part 2
@@ -242,6 +257,11 @@ def parse_message(message):
         hmac_str = message[17:33]
         iv_str = message[33:49]
         message_str = message[49:]
+
+    elif (message[0] == "b"):
+        # Message part 1 response (another client responded to this clients message request)
+        rsa_signature_str_b = message[1:17]
+        dh_public_key_str_b = message[17:]
         
     else:
         print("not a valid message")
@@ -253,20 +273,17 @@ def parse_message(message):
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('172.19.0.2', 59000))
-loggedIn = False
 
 def client_receive():
     while True:
         try:
             message = client.recv(1024).decode('utf-8')
-            print(message)
-            # TODO figure out what to do with the message
-            if message == 'leave':
-                break
+            parse_message(message)
         except:
-            print('Error!')
+            print('Socket error')
+            print('Shutting down...')
             client.close()
-            break
+            exit()
 
 
 def client_send(message):
@@ -275,6 +292,11 @@ def client_send(message):
 ##############
 ## COMMANDS ##
 ##############
+
+loggedIn = False
+rsa_priv_global = None
+dh_priv_global = None
+username_global = ""
 
 def help_cmd():
     print("h (help) - Show this list of commands")
@@ -287,11 +309,9 @@ def help_cmd():
     print("q (quit) - Exit program safetly")
 
 def register_cmd():
-    rsa_priv = rsa_generate_private_key()
-    rsa_pub = rsa_generate_public_key(rsa_priv)
-
-    print("Saving new private key file...")
-    # TODO save rsa_priv to file
+    loggedIn = False
+    rsa_priv_global = rsa_generate_private_key()
+    rsa_pub = rsa_generate_public_key(rsa_priv_global)
 
     username = ""
     while True:
@@ -299,33 +319,49 @@ def register_cmd():
         if len(username) > 0 and len(username) < 16:
             break
         print("Username must be between 1 and 16 characters")
+
+    print("Saving new private key file...")
+    file_name = username + ".pem"
+    file_contents = rsa_get_private_bytes(rsa_priv).decode('utf-8')
+    with open(file_name, 'w') as file:
+        file.write(file_contents)
+    print("Done. Please move the file to a secure location")
+
     message = get_register_message(username, rsa_priv)
     client_send(message)
     loggedIn = True
 
 def login_cmd():
-    # TODO
+    loggedIn = False
     while True:
-        username = input("Please input your existing username: ")
-        if len(username) > 0 and len(username) < 16:
+        username_global = input("Please input your existing username: ")
+        if len(username_global) > 0 and len(username_global) < 16:
             break
         print("Username must be between 1 and 16 characters")
-    message = get_login_message1(username)
+    message = get_login_message1(username_global)
     client_send(message)
-    loggedIn = True
 
 def message_cmd():
-    if !(loggedIn):
+    if loggedIn == False:
         print("You must log in first to send a messge")
         return
+    if rsa_priv_global == None:
+        print("Error. Logged in but no RSA key found")
+        print("Please try logging in again")
+        loggedIn = False
+        return
+    
     while True:
         msg_username = input("Who do you want to message, input his/her username: ")
         if len(msg_username) > 0 and len(msg_username) < 16:
             break
         print("Username must be between 1 and 16 characters")
-    message = get_message1(msg_username, rsa_signature, dh_public_key)
+    
+    dh_priv_global = dh_generate_private_key()
+    dh_pub = dh_generate_public_key(dh_priv_global)
+    rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
+    message = get_message1(msg_username, rsa_signature, dh_pub)
     client_send(message)
-    # TODO
 
 
 def view_cmd():
