@@ -17,6 +17,3 @@ RUN pip install -r requirements.txt
 
 # Copy the entire directory to the working directory
 COPY . .
-
-# Run the client application
-CMD ["python3", "./client.py"]
