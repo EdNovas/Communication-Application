@@ -37,7 +37,7 @@ def rsa_generate_private_key():
 
 # Import a private key that was read from a PEMfile
 def rsa_import_private_key(private_key_bytes):
-    return serialization.load_pem_public_key(private_key_bytes, password=None)
+    return serialization.load_pem_private_key(private_key_bytes, password=None)
 
 
 # Generate a public key from private key
