@@ -46,7 +46,7 @@ After run the client program, you can use `help` or `h` will show the help menu.
 
 ## More guides
 
-For more information and more detailed usage guides, please check the [https://gitlab.csc.uvic.ca/courses/2022091/SENG360_COSI/assignments/erikmckelvey/project-group-18/-/wikis/Documentation](Documentation)
+For more information and more detailed usage guides, please check the [Documentation](https://gitlab.csc.uvic.ca/courses/2022091/SENG360_COSI/assignments/erikmckelvey/project-group-18/-/wikis/Documentation)
 
 ## Authors
 
