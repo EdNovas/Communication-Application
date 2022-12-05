@@ -38,7 +38,10 @@ def rsa_generate_public_key(private_key):
 
 # Get public bytes, used to send the public key in a message
 def rsa_get_public_bytes(public_key):
-    return public_key.public
+    return public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
     
 def rsa_sign_message(private_key, message):
     return private_key.sign(
