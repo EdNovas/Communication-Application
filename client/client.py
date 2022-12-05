@@ -24,6 +24,14 @@ import socket
 
 
 
+# Import a private key that was read from a PEM file
+def import_private_key(private_key_pem):
+    return serialization.load_pem_private_key(private_key_pem, password=None)
+
+# Import a public key that was read from a PEM file
+def import_public_key(public_key_pem):
+    return serialization.load_pem_public_key(private_key_pem, password=None)
+
 ################################
 ## RSA CRYPTOGRAPHY FUNCTIONS ##
 ################################
@@ -34,14 +42,6 @@ def rsa_generate_private_key():
         public_exponent=65537,
         key_size=2048,
     )
-
-# Import a private key that was read from a PEM file
-def rsa_import_private_key(private_key_pem):
-    return serialization.load_pem_private_key(private_key_pem, password=None)
-
-# Import a public key that was read from a PEM file
-def rsa_import_public_key(public_key_pem):
-    return serialization.load_pem_public_key(private_key_pem, password=None)
 
 # Generate a public key from private key
 def rsa_generate_public_key(private_key):
@@ -208,7 +208,7 @@ def get_message1(username, rsa_signature, dh_public_key):
     dh_public_key_str = dh_get_public_bytes(dh_public_key).decode('utf-8')
     return "m" + padded_username + rsa_signature_str + dh_public_key_str
 
-# Get string in the following format: "b"[16 bytes username][16 bytes rsa signature][16 bytes iv][DH public key] 
+# Get string in the following format: "b"[16 bytes username][16 bytes rsa signature][DH public key] 
 def get_message1_response(username, rsa_signature, dh_public_key):
     if len(username) > 16: raise Exception("Username must be max 16 characters")
     if len(rsa_signature) != 16: raise Exception("RSA signature must be of length 16")
@@ -218,11 +218,13 @@ def get_message1_response(username, rsa_signature, dh_public_key):
     dh_public_key_str = dh_get_public_bytes(dh_public_key).decode('utf-8')
     return "b" + padded_username + rsa_signature_str + dh_public_key_str
 
-# Get string in the following format: "n"[16 bytes hmac signature][16 bytes iv][Encrypted message]
+# Get string in the following format: "n"[16 bytes username][16 bytes hmac signature][16 bytes iv][Encrypted message]
 def get_message2(hmac, iv, message):
+    if len(username) > 16: raise Exception("Username must be max 16 characters")
     if len(hmac) != 16: raise Exception("HMAC must be of length 16")
     if len(iv) != 16: raise Exception("IV must be of length 16")
     
+    padded_username = pad_string(username)
     hmac_str = hmac.decode('utf-8')
     iv_str = iv.decode('utf-8')
     message_str = message.decode('utf-8')
@@ -269,13 +271,15 @@ def parse_message(message):
         sender_dh_public_key_pem = message[35:35+dh_public_key_len]
         sender_rsa_pub_pem = message[35+dh_public_key_len:]
 
-        sender_rsa_pub = rsa_import_public_key(sender_rsa_pub_bytes)
+        sender_rsa_pub = import_public_key(sender_rsa_pub_pem)
         if rsa_validate_signature(sender_rsa_pub, sender_dh_public_key_pem, sender_rsa_signature) == False:
-            print("Invalid message received")
+            print("Invalid RSA signature in received message")
             return
         
-        dh_priv_global = dh_generate_private_key()
+        dh_priv = dh_generate_private_key()
         dh_pub = dh_generate_public_key(dh_priv_global)
+        peer_dh_public_key = import_public_key(sender_dh_public_key_pem)
+        shared_key_global = dh_generate_shared_key(dh_priv, peer_dh_public_key)
         rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
 
         message = get_message1_response(padded_username, rsa_signature, dh_pub)
@@ -284,22 +288,53 @@ def parse_message(message):
     elif (message[0] == "b"):
         # Message part 1 response (another client responded to this clients message request)
         # Note: This message is changed by the server and is different than the one that was sent by the other client
+        if loggedIn == False:
+            print("Error. Message response received but not logged in")
+            print("Please try logging in again")
+            return
+        if len(msg_input_global) < 1:
+            print("Error. Message reponse received but no stored message was found")
+            return
+        
+        padded_username = message[1:17]
+        sender_rsa_signature = message[17:33].encode('utf-8')
+        dh_public_key_len = int.from_bytes(message[33:35].encode('utf-8'), 'little', signed=False)
+        sender_dh_public_key_pem = message[35:35+dh_public_key_len]
+        sender_rsa_pub_pem = message[35+dh_public_key_len:]
 
-        # TODO This is not finished
+        sender_rsa_pub = import_public_key(sender_rsa_pub_pem)
+        if rsa_validate_signature(sender_rsa_pub, sender_dh_public_key_pem, sender_rsa_signature) == False:
+            print("Invalid RSA signature in received message response")
+            return
+        
+        peer_dh_public_key = import_public_key(sender_dh_public_key_pem)
+        shared_key = dh_generate_shared_key(dh_priv_global, peer_dh_public_key)
 
-        rsa_signature_str_b = message[1:17]
-        dh_public_key_str_b = message[17:]
+        iv = generate_iv()
+        msg_enc = aes_cbc_encrypt_message(shared_key, msg_input_global, iv)
+        hmac_key = get_sha256_hash(shared_key)
+        hmac_sig = hmac_generate_signature(hmac_key, msg_enc)
+
+        message = get_message2(padded_username, hmac_sig, iv, msg_enc)
+        client_send(message)
 
     elif (message[0] == "n"):
         # Message part 2
-        # Note: This message is changed by the server and is different than the one that was sent by the other client
-
-        # TODO This is not finished
 
         padded_username_n = message[1:17]
-        hmac_str = message[17:33]
-        iv_str = message[33:49]
-        message_str = message[49:]
+        hmac_sig = message[17:33].encode('utf-8')
+        iv = message[33:49].encode('utf-8')
+        msg_enc = message[49:].encode('utf-8')
+
+        hmac_key = get_sha256_hash(shared_key_global)
+        if hmac_verify_signature(hmac_key, hmac_sig, msg_enc) == False:
+            print("Invalid HMAC in final received message")
+            return
+
+        msg_dec = aes_cbc_decrypt_message(shared_key_global, msg_enc, iv)
+
+        print(msg_dec.decode('utf-8'))
+        # TODO Store the message in encrypted form
         
     else:
         # Invalid message recieved, it will be ignored
@@ -334,7 +369,9 @@ def client_send(message):
 loggedIn = False
 rsa_priv_global = None
 dh_priv_global = None
+shared_key_global = None
 username_global = ""
+msg_input_global = ""
 
 def help_cmd():
     print("h (help) - Show this list of commands")
@@ -394,6 +431,13 @@ def message_cmd():
         if len(msg_username) > 0 and len(msg_username) < 16:
             break
         print("Username must be between 1 and 16 characters")
+    
+    msg_input_global = ""
+    while True:
+        msg_input_global = input("Please input a message to send: ")
+        if len(msg_input_global) > 0:
+            break
+        print("You must send at least one character")
     
     dh_priv_global = dh_generate_private_key()
     dh_pub = dh_generate_public_key(dh_priv_global)

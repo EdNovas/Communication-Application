@@ -14,7 +14,7 @@ print('Socket binded.')
 server.listen()
 print('Server is running and listening ...')
 clients = []
-clientInfo = [] # clientInfo is a tuple of format (username, isLoggedIn, nonce, returnAddress)
+clientInfo = [] # clientInfo is a tuple of format (username, isLoggedIn, nonce)
 
 
 
@@ -27,7 +27,7 @@ def handle_client(client):
                 break
             elif message == "u":
                 index = clients.index(client) 
-                clientInfo[index] = (None, False, None, None)
+                clientInfo[index] = (None, False, None)
                 continue
             parse_message(client, message)
         except:
@@ -116,22 +116,40 @@ def parse_message(client, message):
         new_message = "m" + sender_username + rsa_signature_str_m + dh_length + dh_public_key_str + sender_rsa_pub 
         
         clients[receiver_index[0]].sendall(new_message)
-        clientInfo[receiver_index[0]][3] = clientInfo[index][0]
 
     elif (message[0] == "b"):
         # Message part 1 response
-        original_sender = clientInfo[index][3]
-        receiver_index = [idx for idx, tup in enumerate(clientInfo) if tup[0] == original_sender]
-        if len(receiver_index) < 1:
-            # No error message since this user did not initiate the request
+        if clientInfo[index][1] == False:
+            client.sendall("eError. Message response sent, but you are not logged in")
+            client.sendall("ePlease try logging in again")
             return
-
-        # TODO This is not finished
         
-        clients[receiver_index[0]].sendall(message)
+        padded_username = message[1:17]
+
+        receiver_index = [idx for idx, tup in enumerate(clientInfo) if tup[0] == padded_username]
+        if len(receiver_index) < 1:
+            print("Message request received from invalid user")
+            return
+        
+        # Parse message, and create new message with sender username and RSA public key
+        rsa_signature_str_m = message[17:33]
+        dh_public_key_str = message[33:]
+
+        sender_username = clientInfo[index][0]
+        sender_rsa_pub = read_account(sender_username)
+        dh_length = len(dh_public_key_str).to_bytes(2, 'little').decode('utf-8')
+
+        new_message = "b" + sender_username + rsa_signature_str_m + dh_length + dh_public_key_str + sender_rsa_pub
+
+        clients[receiver_index[0]].sendall(new_message)
 
     elif (message[0] == "n"):
         # Message part 2
+        if clientInfo[index][1] == False:
+            client.sendall("eError. Message response sent, but you are not logged in")
+            client.sendall("ePlease try logging in again")
+            return
+        
         padded_username = message[1:17]
         
         receiver_index = [idx for idx, tup in enumerate(clientInfo) if tup[0] == padded_username]
@@ -139,9 +157,12 @@ def parse_message(client, message):
             client.sendall("eUser does not exist, or is not logged in")
             return
 
-        # TODO This is not finished
+        sender_username = clientInfo[index][0]
+        rest_of_message = message[17:]
+        
+        new_message = "n" + sender_username + rest_of_message
             
-        clients[receiver_index[0]].sendall(message)
+        clients[receiver_index[0]].sendall(new_message)
 
 # csv file name to store the accounts
 account_list = "accounts.csv"
@@ -201,7 +222,7 @@ def main():
         print(conn_msg)
 
         clients.append(client)
-        clientInfo.append((None, False, None, None))
+        clientInfo.append((None, False, None))
         
         thread = threading.Thread(target=handle_client, args=(client,))
         thread.start()
