@@ -378,13 +378,13 @@ def main():
         cmd = input("> ")
         if (cmd == "h" or cmd == "help"):
             help_cmd()
-        if (cmd == "r" or cmd == "register")
+        if (cmd == "r" or cmd == "register"):
             register_cmd()
         if (cmd == "l" or cmd == "login"):
             help_cmd()
-        if (cmd == "m" or cmd == "message")
+        if (cmd == "m" or cmd == "message"):
             register_cmd()
         if (cmd == "v" or cmd == "view"):
             help_cmd()
-        if (cmd == "d" or cmd == "delete")
+        if (cmd == "d" or cmd == "delete"):
             register_cmd()
