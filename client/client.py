@@ -4,8 +4,9 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.exceptions import InvalidSignature
 import os
+import threading
+import Socket
 
-print("Hello from client")
 
 # References:
 
@@ -17,6 +18,11 @@ print("Hello from client")
 # Robert Heaton: Off-The-Record Messaging part 3
 # https://robertheaton.com/otr3
 # A high level overview of the Off-The-Record Messaging Protocol
+
+# Bek Brace: TCP-Chat-Room-Python
+# https://github.com/BekBrace/TCP-Chat-Room-Python-
+
+
 
 ################################
 ## RSA CRYPTOGRAPHY FUNCTIONS ##
@@ -244,10 +250,73 @@ def parse_message(message):
         print("not a valid message")
     # TODO
 
+######################
+## SOCKET FUNCTIONS ##
+######################
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(('172.18.0.4', 59000))
+
+def client_receive():
+    while True:
+        try:
+            message = client.recv(1024).decode('utf-8')
+            print(message)
+            # TODO figure out what to do with the message
+            if message == 'leave':
+                break
+        except:
+            print('Error!')
+            client.close()
+            break
+
+
+def client_send(message):
+    client.sendall(message.encode('utf-8'))
+
+##############
+## COMMANDS ##
+##############
+
+def help_cmd():
+    print("h (help) - Show this list of commands")
+    print("r (register) - Register a new account")
+    print("l (login) - Login to an existing account")
+    print("m (message) - Message another user")
+    print("v (view) - View message history with a user")
+    print("d (delete) - Delete message history with a user")
+
+def register_cmd():
+    rsa_priv = rsa_generate_private_key()
+    rsa_pub = rsa_generate_public_key(rsa_priv)
+
+    print("Saving new private key file...")
+    # TODO save rsa_priv to file
+
+    username = ""
+    while True:
+        username = input("Please input a username: ")
+        if len(username) > 0 and len(username) < 16:
+            break
+        print("Username must be between 1 and 16 characters")
+    message = get_register_message(username, rsa_priv)
+    client_send(message)
+
+def login_cmd():
+    # TODO
+
+def message_cmd():
+    # TODO
+
+def view_cmd():
+    # TODO
+
+def delete_cmd():
+    # TODO
 
 
 # The code below shows how will we can use these functions for Diffie-Hellman and message encryption and decryption
-
+"""
 rsa_priv1 = rsa_generate_private_key()
 rsa_pub1 = rsa_generate_public_key(rsa_priv1)
 dh_priv1 = dh_generate_private_key()
@@ -286,4 +355,36 @@ msg_dec = aes_cbc_decrypt_message(share2, msg_enc, iv)
 
 # hmac_key1 sent to server to publisize
 
+
+receive_thread = threading.Thread(target=client_receive)
+receive_thread.start()
+
+send_thread = threading.Thread(target=client_send)
+send_thread.start()
 print(msg_dec)
+"""
+
+##########
+## MAIN ##
+##########
+
+if __name__ == "__main__":
+    main()
+
+def main():
+    print("Welcome to encrypted messenger")
+    print("Input h to see a list of available commands")
+    while(True):
+        cmd = input("> ")
+        if (cmd == "h" or cmd == "help"):
+            help_cmd()
+        if (cmd == "r" or cmd == "register")
+            register_cmd()
+        if (cmd == "l" or cmd == "login"):
+            help_cmd()
+        if (cmd == "m" or cmd == "message")
+            register_cmd()
+        if (cmd == "v" or cmd == "view"):
+            help_cmd()
+        if (cmd == "d" or cmd == "delete")
+            register_cmd()
