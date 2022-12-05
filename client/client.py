@@ -305,13 +305,28 @@ def register_cmd():
 
 def login_cmd():
     # TODO
+    while True:
+        username = input("Please input your existing username: ")
+        if len(username) > 0 and len(username) < 16:
+            break
+        print("Username must be between 1 and 16 characters")
+    message = get_login_message1(username)
+    client_send(message)
     loggedIn = True
 
 def message_cmd():
-    if loggedIn == False:
+    if !(loggedIn):
         print("You must log in first to send a messge")
         return
+    while True:
+        msg_username = input("Who do you want to message, input his/her username: ")
+        if len(msg_username) > 0 and len(msg_username) < 16:
+            break
+        print("Username must be between 1 and 16 characters")
+    message = get_message1(msg_username, rsa_signature, dh_public_key)
+    client_send(message)
     # TODO
+
 
 def view_cmd():
     # TODO
