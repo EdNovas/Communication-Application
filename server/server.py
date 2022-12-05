@@ -17,15 +17,18 @@ clients = []
 clientInfo = [] # clientInfo is a tuple of format (username, isLoggedIn, nonce)
 
 
-
 def handle_client(client):
     while True:
         try:
-            message = client.recv(1024)
-            if message == "q":
+            # Wait for a message from client
+            message = bytearray(client.recv(1024))
+            code = message[0].decode('utf-8')
+
+            # Handle message
+            if code == "q":
                 remove_client(client)
                 break
-            elif message == "u":
+            elif code == "u":
                 index = clients.index(client) 
                 clientInfo[index] = (None, False, None)
                 continue
@@ -44,33 +47,39 @@ def remove_client():
 def parse_message(client, message):
     index = clients.index(client)
 
-    if (message[0] == "r"):
+    code = message[0].decode('utf-8')
+    if (code == "r"):
         # Register
-        padded_username = message[1:17]
-        key_string = message[17:]
+        padded_username = message[1:17].decode('utf-8')
+        key_string = message[17:].decode('utf-8')
 
         if register_account(padded_username, key_string) == False:
-            client.sendall("eUsername is taken")
+            client.sendall(b"eUsername is taken")
             return
         clientInfo[index][0] = padded_username
         clientInfo[index][1] = True
 
-    elif (message[0] == "l"):
+    elif (code == "l"):
         # Login part 1
-        padded_username = message[1:]
+        padded_username = message[1:].decode('utf-8')
+        if len(padded_username) != 16:
+            client.sendall(b"eInvalid username length sent in login request")
+            return
+        
         public_key = read_account(padded_username)
         if public_key == None:
             client.sendall("eUsername not found")
             return
         
-        nonce = os.urandom(16).decode('utf-8')
-        client.sendall("l" + nonce)
+        nonce = os.urandom(16)
+        message = b"l" + nonce
+        client.sendall(message)
         clientInfo[index][2] = nonce
 
-    elif (message[0] == "s"):
+    elif (code == "s"):
         # Login part 2
-        padded_username = message[1:17]
-        signature_str = message[17:]
+        padded_username = message[1:17].decode('utf-8')
+        signature = message[17:]
 
         nonce = clientInfo[index][2]
         if nonce == None:
@@ -83,7 +92,6 @@ def parse_message(client, message):
             return
         
         public_key = serialization.load_pem_public_key(public_key_str.encode('utf-8'))
-        signature = signature_str.encode('utf-8')
 
         if rsa_validate_signature(public_key, nonce, signature) == False:
             client.sendall("eInvalid signature")
@@ -92,13 +100,13 @@ def parse_message(client, message):
         clientInfo[index][0] = padded_username
         clientInfo[index][1] = True
 
-    elif (message[0] == "m"):
+    elif (code == "m"):
         # Message part 1
         if clientInfo[index][1] == False:
             client.sendall("eYou must be logged in to send a message")
             return
 
-        padded_username = message[1:17]
+        padded_username = message[1:17].decode('utf-8')
 
         receiver_index = [idx for idx, tup in enumerate(clientInfo) if tup[0] == padded_username]
         if len(receiver_index) < 1:
@@ -106,25 +114,25 @@ def parse_message(client, message):
             return
 
         # Parse message, and create new message with sender username and RSA public key
-        rsa_signature_str_m = message[17:33]
-        dh_public_key_str = message[33:]
+        rsa_signature = message[17:273]
+        dh_public_key_bytes = message[273:]
 
         sender_username = clientInfo[index][0]
-        sender_rsa_pub = read_account(sender_username)
-        dh_length = len(dh_public_key_str).to_bytes(2, 'little').decode('utf-8')
+        sender_rsa_pub = read_account(sender_username).encode('utf-8')
+        dh_length = len(dh_public_key_str).to_bytes(2, 'little')
 
-        new_message = "m" + sender_username + rsa_signature_str_m + dh_length + dh_public_key_str + sender_rsa_pub 
+        new_message = b"m" + sender_username + rsa_signature + dh_length + dh_public_key_bytes + sender_rsa_pub 
         
         clients[receiver_index[0]].sendall(new_message)
 
-    elif (message[0] == "b"):
+    elif (code == "b"):
         # Message part 1 response
         if clientInfo[index][1] == False:
             client.sendall("eError. Message response sent, but you are not logged in")
             client.sendall("ePlease try logging in again")
             return
         
-        padded_username = message[1:17]
+        padded_username = message[1:17].decode('utf-8')
 
         receiver_index = [idx for idx, tup in enumerate(clientInfo) if tup[0] == padded_username]
         if len(receiver_index) < 1:
@@ -132,25 +140,25 @@ def parse_message(client, message):
             return
         
         # Parse message, and create new message with sender username and RSA public key
-        rsa_signature_str_m = message[17:33]
-        dh_public_key_str = message[33:]
+        rsa_signature = message[17:273]
+        dh_public_key = message[273:]
 
         sender_username = clientInfo[index][0]
-        sender_rsa_pub = read_account(sender_username)
-        dh_length = len(dh_public_key_str).to_bytes(2, 'little').decode('utf-8')
+        sender_rsa_pub = read_account(sender_username).encode('utf-8')
+        dh_length = len(dh_public_key).to_bytes(2, 'little')
 
-        new_message = "b" + sender_username + rsa_signature_str_m + dh_length + dh_public_key_str + sender_rsa_pub
+        new_message = b"b" + sender_username + rsa_signature + dh_length + dh_public_key + sender_rsa_pub
 
         clients[receiver_index[0]].sendall(new_message)
 
-    elif (message[0] == "n"):
+    elif (code == "n"):
         # Message part 2
         if clientInfo[index][1] == False:
             client.sendall("eError. Message response sent, but you are not logged in")
             client.sendall("ePlease try logging in again")
             return
         
-        padded_username = message[1:17]
+        padded_username = message[1:17].decode('utf-8')
         
         receiver_index = [idx for idx, tup in enumerate(clientInfo) if tup[0] == padded_username]
         if len(receiver_index) < 1:
@@ -160,7 +168,7 @@ def parse_message(client, message):
         sender_username = clientInfo[index][0]
         rest_of_message = message[17:]
         
-        new_message = "n" + sender_username + rest_of_message
+        new_message = b"n" + sender_username + rest_of_message
             
         clients[receiver_index[0]].sendall(new_message)
 

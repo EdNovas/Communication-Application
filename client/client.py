@@ -207,7 +207,7 @@ def parse_message(message):
     
     elif (code == "e"):
         # Error message from server
-        print_msg = message[1:]
+        print_msg = message[1:].decode('utf-8')
         print(print_msg)
 
     elif (code == "m"):
@@ -261,7 +261,7 @@ def parse_message(message):
         # Parse message
         padded_username = message[1:17].decode('utf-8')
         sender_rsa_signature = message[17:273]
-        dh_public_key_len = int.from_bytes(message[273:275].encode('utf-8'), 'little', signed=False)
+        dh_public_key_len = int.from_bytes(message[273:275], 'little', signed=False)
         sender_dh_public_key_pem = message[275:275+dh_public_key_len].decode('utf-8')
         sender_rsa_pub_pem = message[275+dh_public_key_len:].decode('utf-8')
 
