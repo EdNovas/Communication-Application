@@ -245,6 +245,7 @@ def parse_message(message):
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('172.18.0.4', 59000))
+loggedIn = False
 
 def client_receive():
     while True:
@@ -274,6 +275,8 @@ def help_cmd():
     print("m (message) - Message another user")
     print("v (view) - View message history with a user")
     print("d (delete) - Delete message history with a user")
+    print("u (logout) - Logout of account")
+    print("q (quit) - Exit program safetly")
 
 def register_cmd():
     rsa_priv = rsa_generate_private_key()
@@ -290,11 +293,16 @@ def register_cmd():
         print("Username must be between 1 and 16 characters")
     message = get_register_message(username, rsa_priv)
     client_send(message)
+    loggedIn = True
 
 def login_cmd():
     # TODO
+    loggedIn = True
 
 def message_cmd():
+    if !(loggedIn):
+        print("You must log in first to send a messge")
+        return
     # TODO
 
 def view_cmd():
@@ -302,6 +310,15 @@ def view_cmd():
 
 def delete_cmd():
     # TODO
+
+def logout_cmd():
+    client_send("u")
+    loggedIn = False
+
+def quit_cmd():
+    client_send("q")
+    exit()
+
 
 
 # The code below shows how will we can use these functions for Diffie-Hellman and message encryption and decryption
@@ -361,6 +378,9 @@ if __name__ == "__main__":
     main()
 
 def main():
+    # Start a thread to accept any messages
+    thread = threading.Thread(target=handle_client, args=(client,))
+    thread.start()
     print("Welcome to encrypted messenger")
     print("Input h to see a list of available commands")
     while(True):
@@ -370,10 +390,14 @@ def main():
         if (cmd == "r" or cmd == "register"):
             register_cmd()
         if (cmd == "l" or cmd == "login"):
-            help_cmd()
+            login_cmd()
         if (cmd == "m" or cmd == "message"):
-            register_cmd()
+            message_cmd()
         if (cmd == "v" or cmd == "view"):
-            help_cmd()
+            view_cmd()
         if (cmd == "d" or cmd == "delete"):
-            register_cmd()
+            delete_cmd()
+        if (cmd == "u" or cmd == "logout"):
+            logout_cmd()
+        if (cmd == "q" or cmd == "quit"):
+            quit_cmd()
