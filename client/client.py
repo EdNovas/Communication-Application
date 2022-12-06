@@ -264,7 +264,6 @@ def parse_message(message):
         dh_priv_global = dh_generate_private_key(parameters)
         dh_pub = dh_generate_public_key(dh_priv_global)
         peer_dh_public_key = import_public_key(sender_dh_public_key_pem)
-        print(isinstance(peer_dh_public_key, dh.DHPublicKey))
         shared_key_global = dh_generate_shared_key(dh_priv_global, peer_dh_public_key)
         rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
 
@@ -347,13 +346,13 @@ def parse_message(message):
 ###############################
 
 def write_msg_history(rsa_public_key, username, message):
-    with open(username + ".msgenc", "a+b") as f:
+    with open(username.strip() + ".msgenc", "a+b") as f:
         encrypted_msg = rsa_encrypt_message(rsa_public_key, pad_message(message.encode('utf-8'))) + b"kesterissmartandcool"
         f.write(encrypted_msg)
 
 def read_msg_history(rsa_private_key, username):
-    if os.path.exists(username + ".msgenc"):
-        with open(username + ".msgenc", "rb") as f:
+    if os.path.exists(username.strip() + ".msgenc"):
+        with open(username.strip() + ".msgenc", "rb") as f:
             file_contents = f.read()
             messages = file_contents.split(b"kesterissmartandcool")
             for enc_msg in messages:
@@ -361,13 +360,13 @@ def read_msg_history(rsa_private_key, username):
                     decrypted_msg = rsa_decrypt_message(rsa_private_key, enc_msg)
                     print(decrypted_msg.decode('utf-8'))
     else:
-        print("There is no chat history between you and " + username)
+        print("There is no chat history between you and " + username.strip())
 
 def delete_msg_history(username):
-    if os.path.exists(username + ".msgenc"):
-        os.remove(username + ".msgenc")
+    if os.path.exists(username.strip() + ".msgenc"):
+        os.remove(username.strip() + ".msgenc")
     else:
-        print("There is no chat history between you and " + username)
+        print("There is no chat history between you and " + username.strip())
     
 
 ######################
@@ -547,6 +546,7 @@ def logout_cmd():
 
     client_send(b"u")
     loggedIn = False
+    print("Logging out...")
 
 def quit_cmd():
     client_send(b"q")
