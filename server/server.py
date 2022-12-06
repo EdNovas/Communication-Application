@@ -61,7 +61,6 @@ def parse_message(client, message):
 
     elif (code == "l"):
         # Login part 1
-        print("Login message received")
         padded_username = message[1:].decode('utf-8')
         if len(padded_username) != 16:
             client.sendall(b"eInvalid username length sent in login request")
@@ -101,6 +100,8 @@ def parse_message(client, message):
         clientInfo[index][0] = padded_username
         clientInfo[index][1] = True
 
+        client.sendall(b"eLogin Success")
+
     elif (code == "m"):
         # Message part 1
         if clientInfo[index][1] == False:
@@ -122,8 +123,7 @@ def parse_message(client, message):
         sender_rsa_pub = read_account(sender_username).encode('utf-8')
         sender_username_bytes = sender_username.encode('utf-8')
         dh_length = len(dh_public_key_bytes).to_bytes(2, 'little')
-
-        new_message = b"m" + sender_username_bytes + rsa_signature + dh_length + dh_public_key_bytes + sender_rsa_pub 
+        new_message = b"m" + sender_username_bytes + rsa_signature + dh_length + dh_public_key_bytes + sender_rsa_pub
         
         clients[receiver_index[0]].sendall(new_message)
 
@@ -147,9 +147,10 @@ def parse_message(client, message):
 
         sender_username = clientInfo[index][0]
         sender_rsa_pub = read_account(sender_username).encode('utf-8')
+        sender_username_bytes = sender_username.encode('utf-8')
         dh_length = len(dh_public_key).to_bytes(2, 'little')
 
-        new_message = b"b" + sender_username + rsa_signature + dh_length + dh_public_key + sender_rsa_pub
+        new_message = b"b" + sender_username_bytes + rsa_signature + dh_length + dh_public_key + sender_rsa_pub
 
         clients[receiver_index[0]].sendall(new_message)
 
@@ -167,7 +168,7 @@ def parse_message(client, message):
             client.sendall(b"eUser does not exist, or is not logged in")
             return
 
-        sender_username = clientInfo[index][0]
+        sender_username = clientInfo[index][0].encode('utf-8')
         rest_of_message = message[17:]
         
         new_message = b"n" + sender_username + rest_of_message

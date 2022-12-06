@@ -111,10 +111,8 @@ def rsa_decrypt_message(private_key, message):
 ## DIFFIE-HELLMAN CRYPTOGRAPHY FUNCTIONS ##
 ###########################################
 
-parameters = dh.generate_parameters(generator=2, key_size=2048)
-
 # Generate a private key for a single message
-def dh_generate_private_key():
+def dh_generate_private_key(parameters):
     return parameters.generate_private_key()
 
 # Get public key from a private key
@@ -168,7 +166,9 @@ def pad_message(message):
 
 # This function gets a SHA256 hash, which is used as the key for HMAC key
 def get_sha256_hash(input):
-    return hashes.SHA256.update(input).finalize()
+    h = hashes.Hash(hashes.SHA256())
+    h.update(input)
+    return h.finalize()
 
 def hmac_generate_signature(key, message):
     h = hmac.HMAC(key, hashes.SHA256())
@@ -216,13 +216,12 @@ def parse_message(message):
             with open(username_global + ".pem", "r") as f:
                 rsa_priv_pem = f.read()
         except:
-            print("Private key file not found")
+            print("Private key file invalid or not found")
             return
 
         rsa_priv_global = import_private_key(rsa_priv_pem.encode('utf-8'))
 
         signature = rsa_sign_message(rsa_priv_global, nonce)
-        username_bytes = pad_string(username_global).encode('utf-8')
 
         # Get a byte array in the following format: b"s"[16 bytes username][rsa signature]
         message = b"s" + username_bytes + signature
@@ -260,9 +259,12 @@ def parse_message(message):
             return
         
         # Create DH keys and sign DH public key
-        dh_priv_global = dh_generate_private_key()
+       
+        parameters = dh.DHParameterNumbers(31316445495521676428187952232369783442765586753757915473647765060453095814335222549808839990545027952239915350268690894477747998072001686126320547649416473918727167199143061764084117346011689165816814201810052181388047483724216779673510089716950796069695957492797890459863874914267921574565797661035685983056313213003768220589047111460978107861802482426073394045366004328266766772627142228827025902187242430995266734830211970256381182266075929430064372250311218544593519292433377081375401081361262592914015216982328887631217471460895254975277369296757574187051074891024171590437552144226168950976774671613515252336487, 2).parameters()
+        dh_priv_global = dh_generate_private_key(parameters)
         dh_pub = dh_generate_public_key(dh_priv_global)
         peer_dh_public_key = import_public_key(sender_dh_public_key_pem)
+        print(isinstance(peer_dh_public_key, dh.DHPublicKey))
         shared_key_global = dh_generate_shared_key(dh_priv_global, peer_dh_public_key)
         rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
 
@@ -288,8 +290,8 @@ def parse_message(message):
         padded_username = message[1:17].decode('utf-8')
         sender_rsa_signature = message[17:273]
         dh_public_key_len = int.from_bytes(message[273:275], 'little', signed=False)
-        sender_dh_public_key_pem = message[275:275+dh_public_key_len].decode('utf-8')
-        sender_rsa_pub_pem = message[275+dh_public_key_len:].decode('utf-8')
+        sender_dh_public_key_pem = message[275:275+dh_public_key_len]
+        sender_rsa_pub_pem = message[275+dh_public_key_len:]
 
         sender_rsa_pub = import_public_key(sender_rsa_pub_pem)
         if rsa_validate_signature(sender_rsa_pub, sender_dh_public_key_pem, sender_rsa_signature) == False:
@@ -302,14 +304,13 @@ def parse_message(message):
 
         # Encrypt message and get HMAC
         iv = generate_iv()
-        msg_enc = aes_cbc_encrypt_message(shared_key, msg_input_global, iv)
+        msg_enc = aes_cbc_encrypt_message(shared_key, pad_message(msg_input_global.encode('utf-8')), iv)
         hmac_key = get_sha256_hash(shared_key)
         hmac_sig = hmac_generate_signature(hmac_key, msg_enc)
-    
         username_bytes = pad_string(padded_username).encode('utf-8')
 
-        # Get string in the following format: "n"[16 bytes username][16 bytes hmac signature][16 bytes iv][Encrypted message]   
-        message = b"n" + username_bytes + hmac + iv + msg_enc
+        # Get string in the following format: "n"[16 bytes username][32 bytes hmac signature][16 bytes iv][Encrypted message]   
+        message = b"n" + username_bytes + hmac_sig + iv + msg_enc
         client_send(message)
 
         # Since this is the last transaction from this user in this message, the message is assumed to be correctly received
@@ -321,9 +322,9 @@ def parse_message(message):
         # Message part 2
 
         padded_username_n = message[1:17].decode('utf-8')
-        hmac_sig = message[17:33]
-        iv = message[33:49]
-        msg_enc = message[49:]
+        hmac_sig = message[17:49]
+        iv = message[49:65]
+        msg_enc = message[65:]
 
         hmac_key = get_sha256_hash(shared_key_global)
         if hmac_verify_signature(hmac_key, hmac_sig, msg_enc) == False:
@@ -346,25 +347,25 @@ def parse_message(message):
 ###############################
 
 def write_msg_history(rsa_public_key, username, message):
-    with open(username + ".txt", "a+") as f:
-        encrypted_msg = rsa_encrypt_message(rsa_public_key, pad_string(message)) + "kesterissmartandcool"
+    with open(username + ".msgenc", "a+b") as f:
+        encrypted_msg = rsa_encrypt_message(rsa_public_key, pad_message(message.encode('utf-8'))) + b"kesterissmartandcool"
         f.write(encrypted_msg)
 
 def read_msg_history(rsa_private_key, username):
-    if os.path.exists(username + ".txt"):
-        with open(username + ".txt") as f:
+    if os.path.exists(username + ".msgenc"):
+        with open(username + ".msgenc", "rb") as f:
             file_contents = f.read()
-            messages = file_contents.split("kesterissmartandcool")
+            messages = file_contents.split(b"kesterissmartandcool")
             for enc_msg in messages:
                 if enc_msg:
                     decrypted_msg = rsa_decrypt_message(rsa_private_key, enc_msg)
-                    print(decrypted_msg)
+                    print(decrypted_msg.decode('utf-8'))
     else:
         print("There is no chat history between you and " + username)
 
 def delete_msg_history(username):
-    if os.path.exists(username + ".txt"):
-        os.remove(username + ".txt")
+    if os.path.exists(username + ".msgenc"):
+        os.remove(username + ".msgenc")
     else:
         print("There is no chat history between you and " + username)
     
@@ -492,12 +493,13 @@ def message_cmd():
             break
         print("You must send at least one character")
     
-    dh_priv_global = dh_generate_private_key()
+    parameters = dh.DHParameterNumbers(31316445495521676428187952232369783442765586753757915473647765060453095814335222549808839990545027952239915350268690894477747998072001686126320547649416473918727167199143061764084117346011689165816814201810052181388047483724216779673510089716950796069695957492797890459863874914267921574565797661035685983056313213003768220589047111460978107861802482426073394045366004328266766772627142228827025902187242430995266734830211970256381182266075929430064372250311218544593519292433377081375401081361262592914015216982328887631217471460895254975277369296757574187051074891024171590437552144226168950976774671613515252336487, 2).parameters()
+    dh_priv_global = dh_generate_private_key(parameters)
     dh_pub = dh_generate_public_key(dh_priv_global)
-    rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
+    dh_public_key_bytes = dh_get_public_bytes(dh_pub)
+    rsa_signature = rsa_sign_message(rsa_priv_global, dh_public_key_bytes)
 
     username_bytes = pad_string(msg_username).encode('utf-8')
-    dh_public_key_bytes = dh_get_public_bytes(dh_pub)
 
     # Get byte array in the following format: b"m"[16 bytes username][256 bytes rsa signature][DH public key] 
     message = b"m" + username_bytes + rsa_signature + dh_public_key_bytes
