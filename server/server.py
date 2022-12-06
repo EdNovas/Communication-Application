@@ -47,7 +47,7 @@ def remove_client(client):
 def parse_message(client, message):
     index = clients.index(client)
     
-    code = bytes(message[0]).decode('utf-8')
+    code = chr(message[0])
     if (code == "r"):
         # Register
         padded_username = message[1:17].decode('utf-8')

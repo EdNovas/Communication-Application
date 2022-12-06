@@ -211,14 +211,19 @@ def parse_message(message):
     if (code == "l"):
         # Login part 1 response
         nonce = message[1:]
-        if rsa_priv_global == None:
-            print("Error. Log in response received but no RSA key found")
-            print("Please try logging in again")
-            return
         if username_global == "":
             print("Error. Log in response received but no username found")
             print("Please try logging in again")
             return
+
+        try:
+            with open(username_global + ".txt", "r") as f:
+                rsa_priv_pem = f.read()
+        except:
+            print("Private key file not found")
+            return
+
+        rsa_priv_global = rsa_import_private_key(rsa_priv_pem)
 
         signature = rsa_sign_message(rsa_priv_global, nonce)
         username_bytes = pad_string(username_global).encode('utf-8')
@@ -455,8 +460,6 @@ def login_cmd():
         print("Username must be between 1 and 16 characters")
     
     username_bytes = pad_string(username_global).encode('utf-8')
-
-
     
     # Get string in the following format: "r"[16 bytes username]
     message = b"l" + username_bytes
