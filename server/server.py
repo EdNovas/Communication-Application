@@ -21,7 +21,7 @@ def handle_client(client):
     while True:
         try:
             # Wait for a message from client
-            message = bytearray(client.recv(1024))
+            message = bytearray(client.recv(4096))
             code = bytes(message[0]).decode('utf-8')
 
             # Handle message
@@ -119,7 +119,7 @@ def parse_message(client, message):
 
         sender_username = clientInfo[index][0]
         sender_rsa_pub = read_account(sender_username).encode('utf-8')
-        dh_length = len(dh_public_key_str).to_bytes(2, 'little')
+        dh_length = len(dh_public_key_bytes).to_bytes(2, 'little')
 
         new_message = b"m" + sender_username + rsa_signature + dh_length + dh_public_key_bytes + sender_rsa_pub 
         

@@ -30,7 +30,7 @@ def import_private_key(private_key_pem):
 
 # Import a public key that was read from a PEM file
 def import_public_key(public_key_pem):
-    return serialization.load_pem_public_key(private_key_pem, password=None)
+    return serialization.load_pem_public_key(public_key_pem, password=None)
 
 ################################
 ## RSA CRYPTOGRAPHY FUNCTIONS ##
@@ -379,7 +379,7 @@ client.connect(('172.19.0.2', 59000))
 def client_receive():
     while True:
         try:
-            message = client.recv(1024)
+            message = client.recv(4096)
             parse_message(message)
         except:
             print('Socket error')
