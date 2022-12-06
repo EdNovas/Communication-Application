@@ -61,6 +61,7 @@ def parse_message(client, message):
 
     elif (code == "l"):
         # Login part 1
+        print("Login message received")
         padded_username = message[1:].decode('utf-8')
         if len(padded_username) != 16:
             client.sendall(b"eInvalid username length sent in login request")

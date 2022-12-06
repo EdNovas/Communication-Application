@@ -561,6 +561,8 @@ def main():
     print("Input h to see a list of available commands")
     while(True):
         cmd = input("> ")
+        if len(cmd) == 0:
+            continue
         if (cmd[0] == "h"):
             help_cmd()
         if (cmd[0] == "r"):
