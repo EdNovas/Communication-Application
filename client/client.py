@@ -216,8 +216,9 @@ def parse_message(message):
             print("Please try logging in again")
             return
 
+        # Open private key file
         try:
-            with open(username_global + ".txt", "r") as f:
+            with open(username_global + ".pem", "r") as f:
                 rsa_priv_pem = f.read()
         except:
             print("Private key file not found")
@@ -385,12 +386,13 @@ def client_receive():
     while True:
         try:
             message = client.recv(4096)
-            parse_message(message)
         except:
             print('Socket error')
             print('Shutting down...')
             client.close()
             exit()
+        if len(message) > 0:
+            parse_message(message)
 
 
 def client_send(message):
