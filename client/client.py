@@ -213,7 +213,7 @@ def parse_message(message):
 
         # Open private key file
         try:
-            with open(username_global + ".pem", "r") as f:
+            with open(username_global.strip() + ".pem", "r") as f:
                 rsa_priv_pem = f.read()
         except:
             print("Private key file invalid or not found")
@@ -222,7 +222,8 @@ def parse_message(message):
         rsa_priv_global = import_private_key(rsa_priv_pem.encode('utf-8'))
 
         signature = rsa_sign_message(rsa_priv_global, nonce)
-
+        username_bytes = pad_string(username_global).encode('utf-8')
+        
         # Get a byte array in the following format: b"s"[16 bytes username][rsa signature]
         message = b"s" + username_bytes + signature
 
@@ -432,7 +433,7 @@ def register_cmd():
         print("Username must be between 1 and 16 characters")
 
     print("Saving new private key file...")
-    file_name = username_global + ".pem"
+    file_name = username_global.strip() + ".pem"
     file_contents = rsa_get_private_bytes(rsa_priv_global).decode('utf-8')
     with open(file_name, 'w') as file:
         file.write(file_contents)
@@ -459,7 +460,7 @@ def login_cmd():
     
     username_bytes = pad_string(username_global).encode('utf-8')
     
-    # Get string in the following format: "r"[16 bytes username]
+    # Get string in the following format: "l"[16 bytes username]
     message = b"l" + username_bytes
     client_send(message)
 
