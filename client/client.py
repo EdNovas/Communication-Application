@@ -414,7 +414,7 @@ def help_cmd():
     print("v (view) - View message history with a user")
     print("d (delete) - Delete message history with a user")
     print("u (logout) - Logout of account")
-    print("q (quit) - Exit program safetly")
+    print("q (quit) - Exit program safely")
 
 def register_cmd():
     global rsa_priv_global
