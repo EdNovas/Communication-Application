@@ -46,7 +46,7 @@ def remove_client():
 
 def parse_message(client, message):
     index = clients.index(client)
-
+    
     code = bytes(message[0]).decode('utf-8')
     if (code == "r"):
         # Register

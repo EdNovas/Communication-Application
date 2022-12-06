@@ -207,7 +207,7 @@ def parse_message(message):
     global shared_key_global
     global msg_input_global
 
-    code = message[0].decode('utf-8')
+    code = bytes(message[0]).decode('utf-8')
     if (code == "l"):
         # Login part 1 response
         nonce = message[1:]
@@ -375,6 +375,7 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print("Connecting...")
 client.connect(('172.19.0.2', 59000))
 
+# This function gets called from a new thread in main()
 def client_receive():
     while True:
         try:
@@ -414,26 +415,27 @@ def help_cmd():
 def register_cmd():
     global rsa_priv_global
     global loggedIn
+    global username_global
 
     loggedIn = False
     rsa_priv_global = rsa_generate_private_key()
     rsa_pub = rsa_generate_public_key(rsa_priv_global)
 
-    username = ""
+    username_global = ""
     while True:
-        username = input("Please input a username: ")
-        if len(username) > 0 and len(username) < 16:
+        username_global = input("Please input a username: ")
+        if len(username_global) > 0 and len(username_global) < 16:
             break
         print("Username must be between 1 and 16 characters")
 
     print("Saving new private key file...")
-    file_name = username + ".pem"
+    file_name = username_global + ".pem"
     file_contents = rsa_get_private_bytes(rsa_priv_global).decode('utf-8')
     with open(file_name, 'w') as file:
         file.write(file_contents)
     print("Done. Please move the file to a secure location")
 
-    username_bytes = pad_string(username).encode('utf-8')
+    username_bytes = pad_string(username_global).encode('utf-8')
     key_bytes = rsa_get_public_bytes(rsa_pub)
 
     # Get bytes array in the following format: b"r"[16 bytes username][rsa public key in PEM format]
@@ -453,6 +455,8 @@ def login_cmd():
         print("Username must be between 1 and 16 characters")
     
     username_bytes = pad_string(username_global).encode('utf-8')
+
+
     
     # Get string in the following format: "r"[16 bytes username]
     message = b"l" + username_bytes
@@ -551,7 +555,7 @@ def quit_cmd():
 
 def main():
     # Start a thread to accept any messages
-    thread = threading.Thread(target=client_receive)
+    thread = threading.Thread(target=client_receive, daemon=True)
     thread.start()
     print("Welcome to encrypted messenger")
     print("Input h to see a list of available commands")
