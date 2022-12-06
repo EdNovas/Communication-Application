@@ -22,20 +22,20 @@ def handle_client(client):
         try:
             # Wait for a message from client
             message = bytearray(client.recv(4096))
-            code = chr(message[0])
-
-            # Handle message
-            if code == "q":
-                remove_client(client)
-                break
-            elif code == "u":
-                index = clients.index(client) 
-                clientInfo[index] = (None, False, None)
-                continue
-            parse_message(client, message)
         except:
             remove_client(client)
             break
+        
+        code = chr(message[0])
+        # Handle message
+        if code == "q":
+            remove_client(client)
+            break
+        elif code == "u":
+            index = clients.index(client) 
+            clientInfo[index] = (None, False, None)
+            continue
+        parse_message(client, message)
 
 def remove_client(client):
     index = clients.index(client)
