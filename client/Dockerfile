@@ -13,7 +13,7 @@ RUN apk update && apk add python3-dev \
 
 # Copy and install pip dependancies
 COPY ./requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
 
 # Copy the entire directory to the working directory
 COPY . .
