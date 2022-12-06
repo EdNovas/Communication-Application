@@ -510,7 +510,7 @@ def view_cmd():
     if rsa_priv_global == None:
         print("Error. Logged in but RSA key not found")
         return
-    if username_global = "":
+    if username_global == "":
         print("Error. Logged in but username not found")
         return
     
@@ -561,6 +561,8 @@ def main():
             help_cmd()
         if (cmd[0] == "r"):
             register_cmd()
+        if (cmd[0] == "u" or cmd == "logout"):
+            logout_cmd()
         if (cmd[0] == "l"):
             login_cmd()
         if (cmd[0] == "m"):
@@ -569,8 +571,6 @@ def main():
             view_cmd()
         if (cmd[0] == "d"):
             delete_cmd()
-        if (cmd[0] == "u" or cmd == "logout"):
-            logout_cmd()
         if (cmd[0] == "q"):
             quit_cmd()
 
