@@ -34,7 +34,7 @@ After run the client program, you can use `help` or `h` will show the help menu.
 
 `login` or `l` will log in as the existing account.
 
-`message` or `m` can send the meesage to another user.
+`message` or `m` can send the message to another user.
 
 `view` or `v` can have a look at the message history stored locally.
 
