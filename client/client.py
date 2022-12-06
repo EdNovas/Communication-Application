@@ -464,6 +464,7 @@ def login_cmd():
     client_send(message)
 
 def message_cmd():
+    global username_global
     global loggedIn
     global rsa_priv_global
     global msg_input_global
@@ -481,6 +482,9 @@ def message_cmd():
     
     while True:
         msg_username = input("Who do you want to message, input his/her username: ")
+        if msg_username.strip() == username_global.strip():
+            print("You cannot send a message to yourself")
+            continue
         if len(msg_username) > 0 and len(msg_username) < 16:
             break
         print("Username must be between 1 and 16 characters")
