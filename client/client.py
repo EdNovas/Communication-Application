@@ -207,7 +207,7 @@ def parse_message(message):
     global shared_key_global
     global msg_input_global
 
-    code = bytes(message[0]).decode('utf-8')
+    code = chr(message[0])
     if (code == "l"):
         # Login part 1 response
         nonce = message[1:]

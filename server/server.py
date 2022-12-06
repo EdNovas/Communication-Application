@@ -22,7 +22,7 @@ def handle_client(client):
         try:
             # Wait for a message from client
             message = bytearray(client.recv(4096))
-            code = bytes(message[0]).decode('utf-8')
+            code = chr(message[0])
 
             # Handle message
             if code == "q":
