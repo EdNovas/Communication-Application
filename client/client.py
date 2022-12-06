@@ -314,7 +314,7 @@ def parse_message(message):
         client_send(message)
 
         # Since this is the last transaction from this user in this message, the message is assumed to be correctly received
-        formatted_msg = username_global + ": " + msg_input_global
+        formatted_msg = username_global.strip() + ": " + msg_input_global
         write_msg_history(rsa_generate_public_key(rsa_priv_global), padded_username, formatted_msg)
 
 
@@ -333,7 +333,7 @@ def parse_message(message):
 
         msg_dec = aes_cbc_decrypt_message(shared_key_global, msg_enc, iv)
 
-        formatted_msg = padded_username_n + ": " + msg_dec.decode('utf-8')
+        formatted_msg = padded_username_n.strip() + ": " + msg_dec.decode('utf-8')
 
         write_msg_history(rsa_generate_public_key(rsa_priv_global), padded_username_n, formatted_msg)
         print(formatted_msg)
