@@ -173,7 +173,7 @@ def pad_message(message):
 
 # This function gets a SHA256 hash, which is used as the key for HMAC key
 def get_sha256_hash(input):
-    return hases.SHA256.update(input).finalize()
+    return hashes.SHA256.update(input).finalize()
 
 def hmac_generate_signature(key, message):
     h = hmac.HMAC(key, hashes.SHA256())
