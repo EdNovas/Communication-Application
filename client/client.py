@@ -213,7 +213,8 @@ def parse_message(message):
 
         # Open private key file
         try:
-            with open(username_global.strip() + ".pem", "r") as f:
+            file_name = username_global.strip() + ".pem"
+            with open(file_name, "r") as f:
                 rsa_priv_pem = f.read()
         except:
             print("Private key file invalid or not found")
@@ -223,7 +224,7 @@ def parse_message(message):
 
         signature = rsa_sign_message(rsa_priv_global, nonce)
         username_bytes = pad_string(username_global).encode('utf-8')
-        
+
         # Get a byte array in the following format: b"s"[16 bytes username][rsa signature]
         message = b"s" + username_bytes + signature
 
@@ -347,13 +348,13 @@ def parse_message(message):
 ###############################
 
 def write_msg_history(rsa_public_key, username, message):
-    with open(username.strip() + ".msgenc", "a+b") as f:
+    with open(username_global.strip() + " with " + username.strip() + ".msgenc", "a+b") as f:
         encrypted_msg = rsa_encrypt_message(rsa_public_key, pad_message(message.encode('utf-8'))) + b"kesterissmartandcool"
         f.write(encrypted_msg)
 
 def read_msg_history(rsa_private_key, username):
-    if os.path.exists(username.strip() + ".msgenc"):
-        with open(username.strip() + ".msgenc", "rb") as f:
+    if os.path.exists(username_global.strip() + " with " + username.strip() + ".msgenc"):
+        with open(username_global.strip() + " with " + username.strip() + ".msgenc", "rb") as f:
             file_contents = f.read()
             messages = file_contents.split(b"kesterissmartandcool")
             for enc_msg in messages:
@@ -364,8 +365,8 @@ def read_msg_history(rsa_private_key, username):
         print("There is no chat history between you and " + username.strip())
 
 def delete_msg_history(username):
-    if os.path.exists(username.strip() + ".msgenc"):
-        os.remove(username.strip() + ".msgenc")
+    if os.path.exists(username_global.strip() + " with " + username.strip() + ".msgenc"):
+        os.remove(username_global.strip() + " with " + username.strip() + ".msgenc")
     else:
         print("There is no chat history between you and " + username.strip())
     
@@ -473,7 +474,7 @@ def message_cmd():
     global rsa_priv_global
 
     if loggedIn == False:
-        print("You must log in first to send a messge")
+        print("You must register or log in first to send a messge")
         return
     if rsa_priv_global == None:
         print("Error. Logged in but no RSA key found")

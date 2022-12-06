@@ -25,6 +25,8 @@ def handle_client(client):
         except:
             remove_client(client)
             break
+        if len(message) < 1:
+            continue
         
         code = chr(message[0])
         # Handle message
