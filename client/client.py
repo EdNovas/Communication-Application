@@ -264,7 +264,7 @@ def parse_message(message):
         shared_key_global = dh_generate_shared_key(dh_priv, peer_dh_public_key)
         rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
 
-        username_bytes = pad_string(username).encode('utf-8')
+        username_bytes = pad_string(padded_username).encode('utf-8')
         dh_public_key_bytes = dh_get_public_bytes(dh_pub)
 
         # Get bytes array in the following format: b"b"[16 bytes username][256 bytes rsa signature][DH public key] 
@@ -304,11 +304,16 @@ def parse_message(message):
         hmac_key = get_sha256_hash(shared_key)
         hmac_sig = hmac_generate_signature(hmac_key, msg_enc)
     
-        username_bytes = pad_string(username).encode('utf-8')
+        username_bytes = pad_string(padded_username).encode('utf-8')
 
         # Get string in the following format: "n"[16 bytes username][16 bytes hmac signature][16 bytes iv][Encrypted message]   
         message = b"n" + username_bytes + hmac + iv + msg_enc
         client_send(message)
+
+        # Since this is the last transaction from this user in this message, the message is assumed to be correctly received
+        formatted_msg = username_global + ": " + msg_input_global
+        write_msg_history(rsa_generate_public_key(rsa_priv_global), padded_username, formatted_msg)
+
 
     elif (code == "n"):
         # Message part 2
@@ -325,11 +330,41 @@ def parse_message(message):
 
         msg_dec = aes_cbc_decrypt_message(shared_key_global, msg_enc, iv)
 
-        print(msg_dec.decode('utf-8'))
-        # TODO Store the message in encrypted form
+        formatted_msg = padded_username_n + ": " + msg_dec.decode('utf-8')
+
+        write_msg_history(rsa_generate_public_key(rsa_priv_global), padded_username_n, formatted_msg)
+        print(formatted_msg)
         
     # else:
         # Invalid message recieved, it will be ignored
+
+
+###############################
+## MESSAGE STORAGE FUNCTIONS ##
+###############################
+
+def write_msg_history(rsa_public_key, username, message):
+    with open(username + ".txt", "a+") as f:
+        encrypted_msg = rsa_encrypt_message(rsa_public_key, pad_string(message)) + "kesterissmartandcool"
+        f.write(encrypted_msg)
+
+def read_msg_history(rsa_private_key, username):
+    if os.path.exists(username + ".txt"):
+        with open(username + ".txt") as f:
+            file_contents = f.read()
+            messages = file_contents.split("kesterissmartandcool")
+            for enc_msg in messages:
+                if enc_msg:
+                    decrypted_msg = rsa_decrypt_message(rsa_private_key, enc_msg)
+                    print(decrypted_msg)
+    else:
+        print("There is no chat history between you and " + username)
+
+def delete_msg_history(username):
+    if os.path.exists(username + ".txt"):
+        os.remove(username + ".txt")
+    else:
+        print("There is no chat history between you and " + username)
     
 
 ######################
@@ -465,12 +500,40 @@ def message_cmd():
 
 
 def view_cmd():
-    # TODO
-    return
+    global loggedIn
+    global rsa_priv_global
+    global username_global
+
+    if loggedIn == False:
+        print("You must be logged in to view message history")
+        return
+    if rsa_priv_global == None:
+        print("Error. Logged in but RSA key not found")
+        return
+    if username_global = "":
+        print("Error. Logged in but username not found")
+        return
+    
+    while True:
+        msg_username = input("Please input the other user's username of the conversation you would like to view: ")
+        if len(msg_username) > 0 and len(msg_username) < 16:
+            break
+        print("Username must be between 1 and 16 characters")
+    read_msg_history(rsa_priv_global, msg_username)
 
 def delete_cmd():
-    # TODO
-    return
+    while True:
+        msg_username = input("Please input the other user's username of the conversation you would like to delete: ")
+        if len(msg_username) > 0 and len(msg_username) < 16:
+            break
+        print("Username must be between 1 and 16 characters")
+    
+    confirm = input("This process is irreversable, please input 'continue' to continue: ")
+    if confirm == "continue":
+        print("Deleting conversation...")
+        delete_msg_history(pad_string(msg_username))
+    else:
+        print("Cancelling...")
 
 def logout_cmd():
     global loggedIn
@@ -481,31 +544,6 @@ def logout_cmd():
 def quit_cmd():
     client_send(b"q")
     exit()
-
-def write_msg_history(username, message):
-    pem = open(username + ".pem")
-    f = open(username + ".txt", "a")
-    encrypted_msg = rsa_encrypt_message(rsa_generate_public_key(rsa_import_private_key(pem)), pad_string(username + ":" + message)) + "kesterissmartandcool"
-    f.write(encrypted_msg)
-    f.close()
-
-def read_msg_history(username):
-    pem = open(username + ".pem")
-    if os.path.exists(username + ".txt"):
-        f = open(username + ".txt")
-        r = f.read()
-        s = r.split("kesterissmartandcool")
-        for x in s:
-            decrypted_msg = rsa_decrypt_message(rsa_import_private_key(pem), x)
-            print(decrypted_msg)
-    else:
-        print("There is no chat history between you and " + username)
-
-def delete_msg_history(username):
-    if os.path.exists(username + ".txt"):
-        os.remove(username + ".txt")
-    else:
-        print("There is no chat history between you and " + username)
 
 ##########
 ## MAIN ##
