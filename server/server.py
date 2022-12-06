@@ -37,7 +37,7 @@ def handle_client(client):
             remove_client(client)
             break
 
-def remove_client():
+def remove_client(client):
     index = clients.index(client)
     clients.remove(client)
     client.close()
