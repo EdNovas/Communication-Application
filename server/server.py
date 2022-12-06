@@ -16,7 +16,7 @@ print('Server is running and listening ...')
 clients = []
 clientInfo = [] # clientInfo is a list of format [username, isLoggedIn, nonce]
 
-
+# This funtion is called from the main method in a new thread whenever a client connects to the server
 def handle_client(client):
     while True:
         try:
@@ -39,13 +39,17 @@ def handle_client(client):
             continue
         parse_message(client, message)
 
+# This function is called when a user disconnects from the server
 def remove_client(client):
     index = clients.index(client)
     clients.remove(client)
     client.close()
     clientInfo.pop(index)
 
-
+# This function is called whenever a client send a message to the server.
+# These messages include Login and Register,
+# As well as messages that are relayed between users.
+# The messages that are sent between users are changed by the server before being relayed
 def parse_message(client, message):
     index = clients.index(client)
     
@@ -210,6 +214,8 @@ def read_account(username):
                 return row[1]
         return None
 
+# Validates an RSA signature using an RSA public key
+# Used to authenticate a user when logging in
 def rsa_validate_signature(public_key, message, signature):
     try:
         public_key.verify(
@@ -224,8 +230,6 @@ def rsa_validate_signature(public_key, message, signature):
         return True
     except InvalidSignature:
         return False
-
-
 
 def main():
     initialize_csv()

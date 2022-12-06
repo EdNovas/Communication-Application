@@ -62,6 +62,7 @@ def rsa_get_public_bytes(public_key):
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
     
+# Sign a message using an RSA private key
 def rsa_sign_message(private_key, message):
     return private_key.sign(
         message,
@@ -72,6 +73,7 @@ def rsa_sign_message(private_key, message):
         hashes.SHA256()
     )
 
+# Validate a signature using an RSA public key
 def rsa_validate_signature(public_key, message, signature):
     try:
         public_key.verify(
@@ -87,6 +89,7 @@ def rsa_validate_signature(public_key, message, signature):
     except InvalidSignature:
         return False
 
+# Encrypt a message using an RSA private key
 def rsa_encrypt_message(public_key, message):
     return public_key.encrypt(
         message,
@@ -97,6 +100,7 @@ def rsa_encrypt_message(public_key, message):
         )
     )
 
+# Decrypt a message using an RSA private key
 def rsa_decrypt_message(private_key, message):
     return private_key.decrypt(
         message,
@@ -170,11 +174,13 @@ def get_sha256_hash(input):
     h.update(input)
     return h.finalize()
 
+# Generate an HMAC signature using an HMAC key
 def hmac_generate_signature(key, message):
     h = hmac.HMAC(key, hashes.SHA256())
     h.update(message)
     return h.finalize()
 
+# Validate an HMAC signature using an HMAC key
 def hmac_verify_signature(key, signature, message):
     h = hmac.HMAC(key, hashes.SHA256())
     h.update(message)
@@ -194,6 +200,9 @@ def pad_string(message):
         message += ' '
     return message
 
+# This function is called whenever a message is received by the server. This typically is done by relaying a message from another user
+# The server will change the username in the message from the receiver to the sender, and will also append the senders RSA public key
+# in some cases
 def parse_message(message):
     global rsa_priv_global
     global dh_priv_global
@@ -347,11 +356,13 @@ def parse_message(message):
 ## MESSAGE STORAGE FUNCTIONS ##
 ###############################
 
+# Write a new message in encrypted form to local storage
 def write_msg_history(rsa_public_key, username, message):
     with open(username_global.strip() + " with " + username.strip() + ".msgenc", "a+b") as f:
         encrypted_msg = rsa_encrypt_message(rsa_public_key, pad_message(message.encode('utf-8'))) + b"kesterissmartandcool"
         f.write(encrypted_msg)
 
+# Decrpyt a full message history between this user and another user, and print it
 def read_msg_history(rsa_private_key, username):
     if os.path.exists(username_global.strip() + " with " + username.strip() + ".msgenc"):
         with open(username_global.strip() + " with " + username.strip() + ".msgenc", "rb") as f:
@@ -364,6 +375,7 @@ def read_msg_history(rsa_private_key, username):
     else:
         print("There is no chat history between you and " + username.strip())
 
+# Delete a file containing an entire message history between this user and another user
 def delete_msg_history(username):
     if os.path.exists(username_global.strip() + " with " + username.strip() + ".msgenc"):
         os.remove(username_global.strip() + " with " + username.strip() + ".msgenc")
@@ -392,7 +404,7 @@ def client_receive():
         if len(message) > 0:
             parse_message(message)
 
-
+# This function is used to send a message in a byte array form to the server
 def client_send(message):
     client.sendall(message)
 
@@ -407,6 +419,7 @@ shared_key_global = None
 username_global = ""
 msg_input_global = ""
 
+# This funtion runs when the user inputs the 'h' command
 def help_cmd():
     print("h (help) - Show this list of commands")
     print("r (register) - Register a new account")
@@ -417,6 +430,7 @@ def help_cmd():
     print("u (logout) - Logout of account")
     print("q (quit) - Exit program safely")
 
+# This funtion runs when the user inputs the 'r' command
 def register_cmd():
     global rsa_priv_global
     global loggedIn
@@ -448,6 +462,7 @@ def register_cmd():
     client_send(message)
     loggedIn = True
 
+# This funtion runs when the user inputs the 'l' command
 def login_cmd():
     global username_global
     global loggedIn
@@ -465,6 +480,7 @@ def login_cmd():
     message = b"l" + username_bytes
     client_send(message)
 
+# This funtion runs when the user inputs the 'm' command
 def message_cmd():
     global username_global
     global loggedIn
@@ -510,7 +526,7 @@ def message_cmd():
     message = b"m" + username_bytes + rsa_signature + dh_public_key_bytes
     client_send(message)
 
-
+# This funtion runs when the user inputs the 'v' command
 def view_cmd():
     global loggedIn
     global rsa_priv_global
@@ -533,6 +549,7 @@ def view_cmd():
         print("Username must be between 1 and 16 characters")
     read_msg_history(rsa_priv_global, msg_username)
 
+# This funtion runs when the user inputs the 'd' command
 def delete_cmd():
     while True:
         msg_username = input("Please input the other user's username of the conversation you would like to delete: ")
@@ -547,6 +564,7 @@ def delete_cmd():
     else:
         print("Cancelling...")
 
+# This funtion runs when the user inputs the 'u' command
 def logout_cmd():
     global loggedIn
 
@@ -554,6 +572,7 @@ def logout_cmd():
     loggedIn = False
     print("Logging out...")
 
+# This funtion runs when the user inputs the 'q' command
 def quit_cmd():
     client_send(b"q")
     exit()
