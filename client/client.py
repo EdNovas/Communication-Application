@@ -30,7 +30,7 @@ def import_private_key(private_key_pem):
 
 # Import a public key that was read from a PEM file
 def import_public_key(public_key_pem):
-    return serialization.load_pem_public_key(public_key_pem, password=None)
+    return serialization.load_pem_public_key(public_key_pem)
 
 ################################
 ## RSA CRYPTOGRAPHY FUNCTIONS ##
@@ -42,11 +42,6 @@ def rsa_generate_private_key():
         public_exponent=65537,
         key_size=2048,
     )
-
-# Import a private key that was read from a PEM file
-def rsa_import_private_key(private_key_bytes):
-    return serialization.load_pem_private_key(private_key_bytes, password=None)
-
 
 # Generate a public key from private key
 def rsa_generate_public_key(private_key):
@@ -224,7 +219,7 @@ def parse_message(message):
             print("Private key file not found")
             return
 
-        rsa_priv_global = rsa_import_private_key(rsa_priv_pem)
+        rsa_priv_global = import_private_key(rsa_priv_pem.encode('utf-8'))
 
         signature = rsa_sign_message(rsa_priv_global, nonce)
         username_bytes = pad_string(username_global).encode('utf-8')
@@ -239,6 +234,7 @@ def parse_message(message):
         # Error message from server
         print_msg = message[1:].decode('utf-8')
         print(print_msg)
+        print("> ", end='')
 
     elif (code == "m"):
         # Message part 1 (another client is attempting to send a message to this client)
@@ -255,8 +251,8 @@ def parse_message(message):
         padded_username = message[1:17].decode('utf-8')
         sender_rsa_signature = message[17:273]
         dh_public_key_len = int.from_bytes(message[273:275], 'little', signed=False)
-        sender_dh_public_key_pem = message[275:275+dh_public_key_len].decode('utf-8')
-        sender_rsa_pub_pem = message[275+dh_public_key_len:].decode('utf-8')
+        sender_dh_public_key_pem = message[275:275+dh_public_key_len]
+        sender_rsa_pub_pem = message[275+dh_public_key_len:]
 
         sender_rsa_pub = import_public_key(sender_rsa_pub_pem)
         if rsa_validate_signature(sender_rsa_pub, sender_dh_public_key_pem, sender_rsa_signature) == False:
@@ -264,10 +260,10 @@ def parse_message(message):
             return
         
         # Create DH keys and sign DH public key
-        dh_priv = dh_generate_private_key()
+        dh_priv_global = dh_generate_private_key()
         dh_pub = dh_generate_public_key(dh_priv_global)
         peer_dh_public_key = import_public_key(sender_dh_public_key_pem)
-        shared_key_global = dh_generate_shared_key(dh_priv, peer_dh_public_key)
+        shared_key_global = dh_generate_shared_key(dh_priv_global, peer_dh_public_key)
         rsa_signature = rsa_sign_message(rsa_priv_global, dh_get_public_bytes(dh_pub))
 
         username_bytes = pad_string(padded_username).encode('utf-8')

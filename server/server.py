@@ -14,7 +14,7 @@ print('Socket binded.')
 server.listen()
 print('Server is running and listening ...')
 clients = []
-clientInfo = [] # clientInfo is a tuple of format (username, isLoggedIn, nonce)
+clientInfo = [] # clientInfo is a list of format [username, isLoggedIn, nonce]
 
 
 def handle_client(client):
@@ -33,7 +33,7 @@ def handle_client(client):
             break
         elif code == "u":
             index = clients.index(client) 
-            clientInfo[index] = (None, False, None)
+            clientInfo[index] = [None, False, None]
             continue
         parse_message(client, message)
 
@@ -120,9 +120,10 @@ def parse_message(client, message):
 
         sender_username = clientInfo[index][0]
         sender_rsa_pub = read_account(sender_username).encode('utf-8')
+        sender_username_bytes = sender_username.encode('utf-8')
         dh_length = len(dh_public_key_bytes).to_bytes(2, 'little')
 
-        new_message = b"m" + sender_username + rsa_signature + dh_length + dh_public_key_bytes + sender_rsa_pub 
+        new_message = b"m" + sender_username_bytes + rsa_signature + dh_length + dh_public_key_bytes + sender_rsa_pub 
         
         clients[receiver_index[0]].sendall(new_message)
 
@@ -209,8 +210,8 @@ def read_account(username):
 def rsa_validate_signature(public_key, message, signature):
     try:
         public_key.verify(
-            signature,
-            message,
+            bytes(signature),
+            bytes(message),
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
                 salt_length=padding.PSS.MAX_LENGTH
@@ -231,7 +232,7 @@ def main():
         print(conn_msg)
 
         clients.append(client)
-        clientInfo.append((None, False, None))
+        clientInfo.append([None, False, None])
         
         thread = threading.Thread(target=handle_client, args=(client,))
         thread.start()
